@@ -10,18 +10,20 @@ public class OpenDoorTower : MonoBehaviour
     [Tooltip("Độ cao cửa sẽ kéo lên (theo trục Y)")]
     public float openDistance = 5f; 
     
-    [Tooltip("Tốc độ mở cửa")]
+    [Tooltip("Tốc độ đóng/mở cửa")]
     public float speed = 2f;
 
     private Vector3 closedPosition;
-    private bool isOpened = false;
+    private Vector3 openPosition;
+    private Coroutine moveCoroutine; // Biến dùng để kiểm soát Coroutine hiện tại
 
     void Start()
     {
-        // Lưu lại vị trí ban đầu của cửa khi game bắt đầu
+        // Lưu lại vị trí đóng và tính toán sẵn vị trí mở ngay từ đầu
         if (doorTransform != null)
         {
             closedPosition = doorTransform.localPosition;
+            openPosition = closedPosition + Vector3.up * openDistance;
         }
         else
         {
@@ -29,43 +31,39 @@ public class OpenDoorTower : MonoBehaviour
         }
     }
 
+    // Khi nhân vật ĐI VÀO vùng cảm biến -> MỞ CỬA
     private void OnTriggerEnter(Collider other)
     {
-        // Kiểm tra xem thứ bước vào có phải là nhân vật của bạn không (dựa vào Tag)
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") && doorTransform != null)
         {
-            OpenDoor(); // Gọi lệnh mở cửa!
+            // Nếu cửa đang đóng dở, dừng việc đóng lại và bắt đầu mở
+            if (moveCoroutine != null) StopCoroutine(moveCoroutine);
+            moveCoroutine = StartCoroutine(MoveDoor(openPosition));
         }
     }
 
-    // Hàm này sẽ được gọi khi bạn muốn mở cửa (ví dụ: nhân vật đi vào vùng trigger)
-    public void OpenDoor()
+    // Khi nhân vật ĐI RA khỏi vùng cảm biến -> ĐÓNG CỬA
+    private void OnTriggerExit(Collider other)
     {
-        if (!isOpened && doorTransform != null)
+        if (other.CompareTag("Player") && doorTransform != null)
         {
-            // Tính toán vị trí đích (vị trí cũ + dịch lên theo trục Y)
-            Vector3 targetPosition = closedPosition + Vector3.up * openDistance;
-            
-            // Chạy Coroutine để di chuyển cửa mượt mà qua từng frame
-            StartCoroutine(MoveDoor(targetPosition));
-            isOpened = true;
+            // Nếu cửa đang mở dở, dừng việc mở lại và bắt đầu đóng
+            if (moveCoroutine != null) StopCoroutine(moveCoroutine);
+            moveCoroutine = StartCoroutine(MoveDoor(closedPosition));
         }
     }
 
-    // Coroutine xử lý animation di chuyển
-    private IEnumerator MoveDoor(Vector3 target)
+    // Coroutine dùng chung cho cả hành động Mở và Đóng
+    private IEnumerator MoveDoor(Vector3 targetPosition)
     {
         // Chạy vòng lặp cho đến khi cửa gần tới đích
-        while (Vector3.Distance(doorTransform.localPosition, target) > 0.01f)
+        while (Vector3.Distance(doorTransform.localPosition, targetPosition) > 0.01f)
         {
-            // Vector3.Lerp giúp chuyển động mượt: nhanh ở đầu và chậm dần về cuối
-            doorTransform.localPosition = Vector3.Lerp(doorTransform.localPosition, target, Time.deltaTime * speed);
-            
-            // Tạm dừng ở frame hiện tại và tiếp tục vòng lặp ở frame tiếp theo
+            doorTransform.localPosition = Vector3.Lerp(doorTransform.localPosition, targetPosition, Time.deltaTime * speed);
             yield return null; 
         }
         
         // Đảm bảo cửa nằm chính xác ở vị trí đích khi kết thúc
-        doorTransform.localPosition = target;
+        doorTransform.localPosition = targetPosition;
     }
 }
