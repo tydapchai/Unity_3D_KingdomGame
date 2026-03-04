@@ -211,6 +211,15 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.unity.package-validation-suite": {
+      "version": "0.22.0-preview",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.nuget.mono-cecil": "0.1.6-preview.2"
+      },
+      "url": "https://packages.unity.com"
+    },
     "com.unity.performance.profile-analyzer": {
       "version": "1.2.4",
       "depth": 0,
@@ -396,6 +405,16 @@
         "com.unity.shadergraph": "17.3.0",
         "com.unity.render-pipelines.core": "17.3.0"
       }
+    },
+    "com.unity.visualscripting": {
+      "version": "1.9.9",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
     },
     "com.unity.xr.legacyinputhelpers": {
       "version": "2.1.13",
