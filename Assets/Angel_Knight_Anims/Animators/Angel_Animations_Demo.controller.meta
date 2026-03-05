@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0a8ee65b09cef094a9d68d04b5dc13e6
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269667
+  packageName: Animated Low Poly Angel Knight
+  packageVersion: 1.0
+  assetPath: Assets/Angel_Knight_Anims/Animators/Angel_Animations_Demo.controller
+  uploadId: 624839
