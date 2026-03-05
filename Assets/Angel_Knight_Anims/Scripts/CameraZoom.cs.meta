@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 1c765544fdf3a8e4d8476766c1f94a2a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269667
+  packageName: Animated Low Poly Angel Knight
+  packageVersion: 1.0
+  assetPath: Assets/Angel_Knight_Anims/Scripts/CameraZoom.cs
+  uploadId: 624839

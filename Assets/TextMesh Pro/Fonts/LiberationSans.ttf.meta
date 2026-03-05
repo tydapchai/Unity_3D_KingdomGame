@@ -1,7 +1,7 @@
 fileFormatVersion: 2
 guid: e3265ab4bf004d28a9537516768c1c75
 timeCreated: 1484171297
-licenseType: Store
+licenseType: Pro
 TrueTypeFontImporter:
   serializedVersion: 2
   fontSize: 16
@@ -19,8 +19,8 @@ TrueTypeFontImporter:
   assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
-  productId: 298128
-  packageName: Fantasy Kingdom in Unity 6 | URP
+  productId: 269667
+  packageName: Animated Low Poly Angel Knight
   packageVersion: 1.0
   assetPath: Assets/TextMesh Pro/Fonts/LiberationSans.ttf
-  uploadId: 703470
+  uploadId: 624839

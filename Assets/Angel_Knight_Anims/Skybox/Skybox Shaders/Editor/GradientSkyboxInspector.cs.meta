@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8ac6bec5910bc48009b72ea8c1df8924
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269667
+  packageName: Animated Low Poly Angel Knight
+  packageVersion: 1.0
+  assetPath: Assets/Angel_Knight_Anims/Skybox/Skybox Shaders/Editor/GradientSkyboxInspector.cs
+  uploadId: 624839

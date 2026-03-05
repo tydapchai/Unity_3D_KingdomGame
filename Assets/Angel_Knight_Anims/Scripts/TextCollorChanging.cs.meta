@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 843e911ca2a31994fab1ab909aaf6083
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269667
+  packageName: Animated Low Poly Angel Knight
+  packageVersion: 1.0
+  assetPath: Assets/Angel_Knight_Anims/Scripts/TextCollorChanging.cs
+  uploadId: 624839

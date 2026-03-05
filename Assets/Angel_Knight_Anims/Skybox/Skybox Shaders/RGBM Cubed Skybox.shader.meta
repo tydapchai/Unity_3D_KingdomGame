@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: d289571c071b643e7a210f11c0f5d0fb
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269667
+  packageName: Animated Low Poly Angel Knight
+  packageVersion: 1.0
+  assetPath: Assets/Angel_Knight_Anims/Skybox/Skybox Shaders/RGBM Cubed Skybox.shader
+  uploadId: 624839
