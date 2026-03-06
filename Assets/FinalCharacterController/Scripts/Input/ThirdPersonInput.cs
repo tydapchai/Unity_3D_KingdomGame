@@ -17,14 +17,25 @@ namespace GinjaGaming.FinalCharacterController
         [SerializeField] private float _cameraMinZoom = 1f;
         [SerializeField] private float _cameraMaxZoom = 5f;
 
-        private CinemachineThirdPersonFollow _thirdPersonFollow;
+        // Đã sửa đổi: Sử dụng đúng class Cinemachine3rdPersonFollow của Cinemachine 3
+        private Cinemachine3rdPersonFollow _thirdPersonFollow;
         #endregion
 
         #region Startup
         private void Awake()
         {
-            _thirdPersonFollow = _virtualCamera.GetComponent<CinemachineThirdPersonFollow>();
+            // Đã sửa đổi: Lấy component Cinemachine3rdPersonFollow
+            if (_virtualCamera != null)
+            {
+                _thirdPersonFollow = _virtualCamera.GetComponent<Cinemachine3rdPersonFollow>();
+                
+                if (_thirdPersonFollow == null)
+                {
+                    Debug.LogWarning("Không tìm thấy component Cinemachine3rdPersonFollow trên Virtual Camera!");
+                }
+            }
         }
+        
         private void OnEnable()
         {
             if (PlayerInputManager.Instance?.PlayerControls == null)
@@ -53,7 +64,11 @@ namespace GinjaGaming.FinalCharacterController
         #region Update
         private void Update()
         {
-            _thirdPersonFollow.CameraDistance = Mathf.Clamp(_thirdPersonFollow.CameraDistance + ScrollInput.y, _cameraMinZoom, _cameraMaxZoom);
+            // Đã sửa đổi: Thêm điều kiện check null để code chạy an toàn
+            if (_thirdPersonFollow != null)
+            {
+                _thirdPersonFollow.CameraDistance = Mathf.Clamp(_thirdPersonFollow.CameraDistance + ScrollInput.y, _cameraMinZoom, _cameraMaxZoom);
+            }
         }
 
         private void LateUpdate()
