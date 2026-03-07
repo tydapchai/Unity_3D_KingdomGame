@@ -122,15 +122,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96146f425afc16b40bbb097bafbf5c8c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSize: {x: 250, y: 250}
+  worldOffset: {x: -512, y: -491.52}
+  worldSize: {x: 1228.8, y: 1228.8}
   fullScreenDimensions: {x: 1000, y: 1000}
   zoomSpeed: 0.1
   maxZoom: 10
   minZoom: 1
   scrollViewRectTransform: {fileID: 3758782686482129861}
   contentRectTransform: {fileID: 1585548342531915002}
-  minimapIconPrefab: {fileID: 5844549433415927625, guid: d3b591b998bbc194cb39de389e9b6bb2,
-    type: 3}
+  minimapIconPrefab: {fileID: 5844549433415927625, guid: d3b591b998bbc194cb39de389e9b6bb2, type: 3}
 --- !u!1 &4307537891313405169
 GameObject:
   m_ObjectHideFlags: 0
@@ -196,7 +196,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c0ac53a935aaf4b4392e6bf6c8d65f15, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a6680163ac2d5a246839e74754522d39, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
