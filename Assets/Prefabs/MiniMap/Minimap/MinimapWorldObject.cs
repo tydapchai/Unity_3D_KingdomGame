@@ -10,11 +10,17 @@ public class MinimapWorldObject : MonoBehaviour
 
     private void Start()
     {
+        if (MinimapController.Instance == null)
+            return;
+
         MinimapController.Instance.RegisterMinimapWorldObject(this, followObject);
     }
 
     private void OnDestroy()
     {
+        if (MinimapController.Instance == null)
+            return;
+
         MinimapController.Instance.RemoveMinimapWorldObject(this);
     }
 }

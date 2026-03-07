@@ -72,7 +72,6 @@ public class MinimapController : MonoBehaviour
     {
         var minimapIcon = Instantiate(minimapIconPrefab);
         minimapIcon.transform.SetParent(contentRectTransform);
-        minimapIcon.transform.SetParent(contentRectTransform);
         minimapIcon.Image.sprite = miniMapWorldObject.MinimapIcon;
         miniMapWorldObjectsLookup[miniMapWorldObject] = minimapIcon;
 
@@ -82,11 +81,16 @@ public class MinimapController : MonoBehaviour
 
     public void RemoveMinimapWorldObject(MinimapWorldObject minimapWorldObject)
     {
-        if (miniMapWorldObjectsLookup.TryGetValue(minimapWorldObject, out MinimapIcon icon))
-        {
-            miniMapWorldObjectsLookup.Remove(minimapWorldObject);
+        if (!miniMapWorldObjectsLookup.TryGetValue(minimapWorldObject, out MinimapIcon icon))
+            return;
+
+        miniMapWorldObjectsLookup.Remove(minimapWorldObject);
+
+        if (followIcon == icon)
+            followIcon = null;
+
+        if (icon != null)
             Destroy(icon.gameObject);
-        }
     }
 
 
@@ -151,6 +155,9 @@ public class MinimapController : MonoBehaviour
         {
             var miniMapWorldObject = kvp.Key;
             var miniMapIcon = kvp.Value;
+            if (miniMapWorldObject == null || miniMapIcon == null)
+                continue;
+
             var mapPosition = WorldPositionToMapPosition(miniMapWorldObject.transform.position);
 
             miniMapIcon.RectTransform.anchoredPosition = mapPosition;
