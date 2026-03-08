@@ -56,6 +56,7 @@ public class MissionManager : MonoBehaviour
     public bool Mission2LaunchCompleted => mission2LaunchCompleted;
     public int Mission3CurrentWave => mission3CurrentWave;
     public bool Mission3CombatStarted => mission3CombatStarted;
+    public bool Mission3Completed => mission3Completed;
 
     private void Awake()
     {
@@ -68,6 +69,7 @@ public class MissionManager : MonoBehaviour
         Instance = this;
 
         AutoAssignSceneReferences();
+        EnsureMissionVisuals();
         ApplyInitialSceneState();
         RefreshObjectiveText();
     }
@@ -256,6 +258,11 @@ public class MissionManager : MonoBehaviour
             return;
         }
 
+        if (mission3Completed)
+        {
+            return;
+        }
+
         mission3Completed = true;
         mission3CurrentWave = 2;
 
@@ -350,6 +357,19 @@ public class MissionManager : MonoBehaviour
         if (m3Fragment == null) m3Fragment = FindSceneObject("M3_Fragment");
     }
 
+    private void EnsureMissionVisuals()
+    {
+        if (m1PedestalVfx == null)
+        {
+            return;
+        }
+
+        if (m1PedestalVfx.GetComponent<MissionBeaconVisual>() == null)
+        {
+            m1PedestalVfx.AddComponent<MissionBeaconVisual>();
+        }
+    }
+
     private static GameObject FindSceneObject(string objectName)
     {
         GameObject found = GameObject.Find(objectName);
@@ -394,7 +414,12 @@ public class MissionManager : MonoBehaviour
                     return "M2 step2: Gạt cần để kích hoạt bệ ma pháp";
                 }
 
-                return "M2 step3: Leo lên và lấy Mảnh Ghép Can Đảm";
+                if (!mission2LaunchCompleted)
+                {
+                    return "M2 step3: Dùng bệ ma pháp để tới ban công giữa";
+                }
+
+                return "M2 done: Nhặt Mảnh Ghép Can Đảm";
 
             case MissionState.Mission3:
                 if (!mission3CombatStarted)

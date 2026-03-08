@@ -9,6 +9,7 @@ public class LeverInteractable : MonoBehaviour
     [SerializeField] private Transform leverHandle;
     [SerializeField] private GameObject magicPadPrefab;
     [SerializeField] private Transform magicPadSpawnPoint;
+    [SerializeField] private GameObject launchPadToEnable;
 
     [Header("Lever")]
     [SerializeField] private float activatedXAngle = -45f;
@@ -113,6 +114,7 @@ public class LeverInteractable : MonoBehaviour
         _activated = true;
         leverHandle.localRotation = Quaternion.Euler(activatedXAngle, _initialLeverRotation.eulerAngles.y, _initialLeverRotation.eulerAngles.z);
         SpawnMagicPad();
+        EnableLaunchPad();
         missionManager.RegisterMission2LeverActivated();
 
         if (disableAfterUse)
@@ -134,5 +136,15 @@ public class LeverInteractable : MonoBehaviour
 
         Transform spawnPoint = magicPadSpawnPoint != null ? magicPadSpawnPoint : transform;
         _spawnedMagicPad = Instantiate(magicPadPrefab, spawnPoint.position, spawnPoint.rotation);
+    }
+
+    private void EnableLaunchPad()
+    {
+        if (launchPadToEnable == null)
+        {
+            return;
+        }
+
+        launchPadToEnable.SetActive(true);
     }
 }
