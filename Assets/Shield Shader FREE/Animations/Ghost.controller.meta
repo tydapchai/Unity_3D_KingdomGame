@@ -1,15 +1,8 @@
 fileFormatVersion: 2
-guid: 6b2bccc04a6f5ae40be05154d1196b7b
+guid: 2ec1fa84e39d30444bd93029af1d5532
 NativeFormatImporter:
   externalObjects: {}
-  mainObjectFileID: 9100000
+  mainObjectFileID: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 349218
-  packageName: Shield Shader FREE
-  packageVersion: 1.0
-  assetPath: Assets/Shield Shader FREE/Animations/Ghost.controller
-  uploadId: 831154
