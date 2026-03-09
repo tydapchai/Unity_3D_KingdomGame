@@ -1,0 +1,37 @@
+using UnityEngine;
+using UnityEngine.Audio;
+using UnityEngine.UI;
+
+public class VolumeManager : MonoBehaviour
+{
+    [SerializeField] private AudioMixer audioMixer;
+    [SerializeField] private Slider volumeSlider;
+
+    private const string VOLUME_PREF_KEY = "MasterVolumePref";
+
+    void Start()
+    {
+        float savedVolume = PlayerPrefs.GetFloat(VOLUME_PREF_KEY, 0.75f);
+        
+        volumeSlider.value = savedVolume;
+        
+        SetVolume(savedVolume);
+
+        volumeSlider.onValueChanged.AddListener(SetVolume);
+    }
+
+    public void SetVolume(float sliderValue)
+    {
+        if (sliderValue <= 0.0001f) 
+        {
+            audioMixer.SetFloat("audio", -80f);
+        }
+        else 
+        {
+            float dbVolume = Mathf.Log10(sliderValue) * 20;
+            audioMixer.SetFloat("Audio", dbVolume);
+        }
+
+        PlayerPrefs.SetFloat(VOLUME_PREF_KEY, sliderValue);
+    }
+}
