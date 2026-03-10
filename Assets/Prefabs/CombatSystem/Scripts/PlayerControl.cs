@@ -3,26 +3,36 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using StarterAssets;
+
 public class PlayerControl : MonoBehaviour
 {
     [Space]
     [Header("Components")]
     [SerializeField] private Animator anim;
     [SerializeField] private ThirdPersonController thirdPersonController;
-   // [SerializeField] private GameControl gameControl;
- 
+    // [SerializeField] private GameControl gameControl;
+
     [Space]
     [Header("Combat")]
     public Transform target;
     [SerializeField] private Transform attackPos;
     [Tooltip("Offset Stoping Distance")][SerializeField] private float quickAttackDeltaDistance;
     [Tooltip("Offset Stoping Distance")][SerializeField] private float heavyAttackDeltaDistance;
-    [SerializeField] private float knockbackForce = 10f; 
-    [SerializeField] private float airknockbackForce = 10f; 
+    [SerializeField] private float knockbackForce = 10f;
+    [SerializeField] private float airknockbackForce = 10f;
     [SerializeField] private float attackRange = 1f;
     [SerializeField] private float reachTime = 0.3f;
     [SerializeField] private LayerMask enemyLayer;
     bool isAttacking = false;
+
+    [Space]
+    [Header("Audio & Sound")]
+    public AudioSource audioSource;
+    public AudioClip[] swingSounds; // Tiếng vung vũ khí (Vút, xé gió)
+    public AudioClip[] hitSounds;   // Tiếng chém trúng địch (Phập, Keng)
+
+    [Range(0.8f, 1.2f)] public float minPitch = 0.9f;
+    [Range(0.8f, 1.2f)] public float maxPitch = 1.1f;
 
     [Space]
     [Header("Debug")]
@@ -31,7 +41,7 @@ public class PlayerControl : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-       
+
     }
 
     // Update is called once per frame
@@ -42,12 +52,12 @@ public class PlayerControl : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if(target == null)
+        if (target == null)
         {
             return;
         }
 
-        if((Vector3.Distance(transform.position, target.position) >= TargetDetectionControl.instance.detectionRange))
+        if ((Vector3.Distance(transform.position, target.position) >= TargetDetectionControl.instance.detectionRange))
         {
             NoTarget();
         }
@@ -78,7 +88,7 @@ public class PlayerControl : MonoBehaviour
     }
 
     #region Attack, PerformAttack, Reset Attack, Change Target
-  
+
 
     public void Attack(int attackState)
     {
@@ -90,28 +100,21 @@ public class PlayerControl : MonoBehaviour
         thirdPersonController.canMove = false;
         TargetDetectionControl.instance.canChangeTarget = false;
         RandomAttackAnim(attackState);
-       
+
     }
 
     private void RandomAttackAnim(int attackState)
     {
-        
-
-        switch (attackState) 
+        switch (attackState)
         {
             case 0: //Quick Attack
-
                 QuickAttack();
                 break;
 
             case 1:
                 HeavyAttack();
                 break;
-
         }
-
-
-       
     }
 
     void QuickAttack()
@@ -125,7 +128,6 @@ public class PlayerControl : MonoBehaviour
         switch (attackIndex)
         {
             case 1: //punch
-
                 if (target != null)
                 {
                     MoveTowardsTarget(target.position, quickAttackDeltaDistance, "punch");
@@ -136,11 +138,9 @@ public class PlayerControl : MonoBehaviour
                     thirdPersonController.canMove = true;
                     TargetDetectionControl.instance.canChangeTarget = true;
                 }
-
                 break;
 
             case 2: //kick
-
                 if (target != null)
                 {
                     MoveTowardsTarget(target.position, quickAttackDeltaDistance, "kick");
@@ -151,16 +151,12 @@ public class PlayerControl : MonoBehaviour
                     thirdPersonController.canMove = true;
                     TargetDetectionControl.instance.canChangeTarget = true;
                 }
-                   
-
                 break;
 
             case 3: //mmakick
-
                 if (target != null)
                 {
                     MoveTowardsTarget(target.position, quickAttackDeltaDistance, "mmakick");
-
                     isAttacking = true;
                 }
                 else
@@ -168,8 +164,6 @@ public class PlayerControl : MonoBehaviour
                     thirdPersonController.canMove = true;
                     TargetDetectionControl.instance.canChangeTarget = true;
                 }
-               
-
                 break;
         }
     }
@@ -177,7 +171,6 @@ public class PlayerControl : MonoBehaviour
     void HeavyAttack()
     {
         int attackIndex = Random.Range(1, 3);
-        //int attackIndex = 2;
         if (debug)
         {
             Debug.Log(attackIndex + " attack index");
@@ -186,29 +179,22 @@ public class PlayerControl : MonoBehaviour
         switch (attackIndex)
         {
             case 1: //heavyAttack1
-
                 if (target != null)
                 {
-                    //MoveTowardsTarget(target.position, kickDeltaDistance, "heavyAttack1");
                     FaceThis(target.position);
                     anim.SetBool("heavyAttack1", true);
                     isAttacking = true;
-                  
                 }
                 else
                 {
                     TargetDetectionControl.instance.canChangeTarget = true;
                     thirdPersonController.canMove = true;
                 }
-
-
                 break;
 
             case 2: //heavyAttack2
-
                 if (target != null)
                 {
-                    //MoveTowardsTarget(target.position, kickDeltaDistance, "heavyAttack2");
                     FaceThis(target.position);
                     anim.SetBool("heavyAttack2", true);
                     isAttacking = true;
@@ -218,7 +204,6 @@ public class PlayerControl : MonoBehaviour
                     thirdPersonController.canMove = true;
                     TargetDetectionControl.instance.canChangeTarget = true;
                 }
-
                 break;
         }
     }
@@ -237,24 +222,50 @@ public class PlayerControl : MonoBehaviour
 
     public void PerformAttack() // Animation Event ---- for Attacking Targets
     {
-        // Assuming we have a melee attack with a short range
-       
         Collider[] hitEnemies = Physics.OverlapSphere(attackPos.position, attackRange, enemyLayer);
+        bool hasHitSomeone = false;
 
         foreach (Collider enemy in hitEnemies)
         {
-            Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
             EnemyBase enemyBase = enemy.GetComponent<EnemyBase>();
+            Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
+
+            // 1. Xử lý Trừ máu và Sinh hiệu ứng máu (Chỉ chạy khi quái có script EnemyBase)
+            if (enemyBase != null)
+            {
+                enemyBase.TakeDamage(25f); // Trừ máu
+                enemyBase.SpawnHitVfx(enemyBase.transform.position); // Hiện VFX văng máu
+                hasHitSomeone = true; // Ghi nhận là đã chém trúng thịt
+            }
+
+            // 2. Xử lý Lực đẩy lùi - Knockback (Chỉ chạy khi quái có Rigidbody)
             if (enemyRb != null)
             {
-                // Calculate knockback direction
+                // Tính toán hướng đẩy lùi
                 Vector3 knockbackDirection = enemy.transform.position - transform.position;
-                knockbackDirection.y = airknockbackForce; // Keep the knockback horizontal
+                knockbackDirection.y = airknockbackForce; // Giữ lực đẩy ngang/chếch lên
 
-                // Apply force to the enemy
+                // Tác dụng lực đẩy lên quái
                 enemyRb.AddForce(knockbackDirection.normalized * knockbackForce, ForceMode.Impulse);
-                enemyBase.SpawnHitVfx(enemyBase.transform.position);
             }
+        }
+
+        // 3. Phát âm thanh khi chém trúng mục tiêu
+        if (hasHitSomeone && hitSounds.Length > 0 && audioSource != null)
+        {
+            AudioClip hitClip = hitSounds[Random.Range(0, hitSounds.Length)];
+            audioSource.pitch = Random.Range(minPitch, maxPitch);
+            audioSource.PlayOneShot(hitClip);
+        }
+    }
+
+    public void PlaySwingSound() // Animation Event ---- for Swinging Weapon
+    {
+        if (swingSounds.Length > 0 && audioSource != null)
+        {
+            AudioClip clip = swingSounds[Random.Range(0, swingSounds.Length)];
+            audioSource.pitch = Random.Range(minPitch, maxPitch);
+            audioSource.PlayOneShot(clip);
         }
     }
 
@@ -262,13 +273,12 @@ public class PlayerControl : MonoBehaviour
     private EnemyBase currentTarget;
     public void ChangeTarget(Transform target_)
     {
-        
-        if(target != null)
+
+        if (target != null)
         {
-            //oldTarget = target_.GetComponent<EnemyBase>(); //clear old target
             oldTarget.ActiveTarget(false);
         }
-       
+
         target = target_;
 
         oldTarget = target_.GetComponent<EnemyBase>(); //set current target

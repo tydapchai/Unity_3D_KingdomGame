@@ -14548,6 +14548,14 @@ PrefabInstance:
       propertyPath: m_StreamingVersion
       value: 20230301
       objectReference: {fileID: 0}
+    - target: {fileID: 913522690108387400, guid: 04edefc61b09d4343a4e972fdc9283fe, type: 3}
+      propertyPath: m_Orbits.Array.data[0].m_Radius
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 913522690108387400, guid: 04edefc61b09d4343a4e972fdc9283fe, type: 3}
+      propertyPath: m_Orbits.Array.data[2].m_Radius
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 2223189170807798561, guid: 04edefc61b09d4343a4e972fdc9283fe, type: 3}
       propertyPath: m_StreamingVersion
       value: 20230301
