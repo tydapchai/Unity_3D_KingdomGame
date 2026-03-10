@@ -24,7 +24,7 @@ public class VolumeManager : MonoBehaviour
     {
         if (sliderValue <= 0.0001f) 
         {
-            audioMixer.SetFloat("audio", -80f);
+            audioMixer.SetFloat("Audio", -80f);
         }
         else 
         {
