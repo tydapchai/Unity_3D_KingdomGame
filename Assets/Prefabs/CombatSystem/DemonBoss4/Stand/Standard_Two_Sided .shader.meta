@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 5fca0a4a6b713c5479f381358286714d
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 250504
+  packageName: DemonBoss4
+  packageVersion: 1.0
+  assetPath: Assets/DemonBoss4/Stand/Standard_Two_Sided .shader
+  uploadId: 572390

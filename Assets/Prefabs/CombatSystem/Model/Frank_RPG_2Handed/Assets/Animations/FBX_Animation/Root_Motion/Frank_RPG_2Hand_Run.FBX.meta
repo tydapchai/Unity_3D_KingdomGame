@@ -1,7 +1,7 @@
 fileFormatVersion: 2
 guid: 36e26b318db1bbb468672851468c87a6
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable:
   - first:
       1: 100000
@@ -514,16 +514,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: "Copied Avatar Rig Configuration mis-match. Bone length in
-      copied configuration does not match position in animation file:\n\t'thigh_l'
-      : position error = 3.395390 mm\n\t'calf_l' : position error = 1.069043 mm\n\t'thigh_r'
-      : position error = 2.567571 mm\n\t'calf_r' : position error = 2.918247 mm\n\t'lowerarm_l'
-      : position error = 1.426817 mm\n\t'hand_l' : position error = 1.801793 mm\n\t'middle_02_l'
-      : position error = 1.134927 mm\n\t'ring_02_l' : position error = 1.460341 mm\n\t'upperarm_r'
-      : position error = 1.359558 mm\n\t'lowerarm_r' : position error = 1.494625
-      mm\n\t'hand_r' : position error = 4.662433 mm\n\t'middle_03_r' : position error
-      = 1.024618 mm\n"
     animationImportErrors: 
     animationImportWarnings: "\nClip 'Take 001' has import animation warnings that
       might lower retargeting quality:\nNote: Activate translation DOF on avatar
@@ -575,7 +565,14 @@ ModelImporter:
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
-      events: []
+      events:
+      - time: 0.32244894
+        functionName: OnRunning
+        data: 
+        objectReferenceParameter: {instanceID: 0}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
       transformMask: []
       maskType: 3
       maskSource: {instanceID: 0}
@@ -606,6 +603,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
