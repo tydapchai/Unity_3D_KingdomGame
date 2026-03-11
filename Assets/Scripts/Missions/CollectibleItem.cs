@@ -1,3 +1,4 @@
+using Unity.FantasyKingdom;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
@@ -18,6 +19,11 @@ public class CollectibleItem : MonoBehaviour
     [SerializeField] private MissionManager missionManager;
     [SerializeField] private GameObject objectToDisable;
     [SerializeField] private bool destroyOnCollect = true;
+
+    [Header("Inventory Reward")]
+    [SerializeField] private ItemSO inventoryItem;
+    [SerializeField] private int inventoryAmount = 1;
+    [SerializeField] private Inventory inventory;
 
     private bool _collected;
 
@@ -46,6 +52,8 @@ public class CollectibleItem : MonoBehaviour
         {
             objectToDisable = gameObject;
         }
+
+        ResolveInventoryReference();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -72,6 +80,7 @@ public class CollectibleItem : MonoBehaviour
         }
 
         _collected = true;
+        GrantInventoryReward();
 
         if (destroyOnCollect)
         {
@@ -137,5 +146,36 @@ public class CollectibleItem : MonoBehaviour
             default:
                 return false;
         }
+    }
+
+    private void ResolveInventoryReference()
+    {
+        if (inventoryItem != null && inventory == null)
+        {
+            inventory = FindObjectOfType<Inventory>();
+        }
+    }
+
+    private void GrantInventoryReward()
+    {
+        if (inventoryItem == null)
+        {
+            return;
+        }
+
+        if (inventory == null)
+        {
+            ResolveInventoryReference();
+        }
+
+        if (inventory == null)
+        {
+            Debug.LogWarning(
+                $"Collectible '{name}' is configured to add '{inventoryItem.name}' to the inventory, but no Inventory was found in the scene.",
+                this);
+            return;
+        }
+
+        inventory.AddItem(inventoryItem, Mathf.Max(1, inventoryAmount));
     }
 }

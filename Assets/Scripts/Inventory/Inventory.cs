@@ -18,7 +18,13 @@ namespace Unity.FantasyKingdom
         public GameObject container;
         public Image dragIcon;
         public float pickupRange = 3f;
+        [SerializeField] private float dropForwardDistance = 1.2f;
+        [SerializeField] private float dropHeightOffset = 0.75f;
+        [SerializeField] private float dropClearanceBuffer = 0.35f;
+        [SerializeField] private float droppedItemPickupGraceDuration = 0.2f;
         private Item lockedItem = null;
+        private Item recentlyDroppedItem = null;
+        private float recentlyDroppedItemIgnoreUntil = -1f;
         public Material highlightMaterial;
         private readonly RaycastHit[] itemDetectionHits = new RaycastHit[16];
         private readonly Collider[] nearbyItemColliders = new Collider[32];
@@ -139,23 +145,23 @@ namespace Unity.FantasyKingdom
             UpdateHotBarOpacity();
         }
 
-        public void AddItem(ItemSO itemToAdd, int amount)
+        public int AddItem(ItemSO itemToAdd, int amount)
         {
             if (itemToAdd == null)
             {
                 Debug.LogError("Cannot add a null item to the inventory.");
-                return;
+                return 0;
             }
 
             if (amount <= 0)
             {
-                return;
+                return 0;
             }
 
             if (itemToAdd.maxStackSize <= 0)
             {
                 Debug.LogError($"Item '{itemToAdd.name}' has an invalid max stack size: {itemToAdd.maxStackSize}.");
-                return;
+                return 0;
             }
 
             if (allSlots.Count == 0)
@@ -164,40 +170,124 @@ namespace Unity.FantasyKingdom
             }
 
             int remaining = amount;
-            foreach (Slot slot in allSlots)
-            {
-                if (slot.HasItem() && slot.GetItem() == itemToAdd)
-                {
-                    int currentAmount = slot.GetAmount();
-                    int maxStack = itemToAdd.maxStackSize;
-                    if (currentAmount < maxStack)
-                    {
-                        int spaceLeft = maxStack - currentAmount;
-                        int amountToAdd = Mathf.Min(spaceLeft, remaining);
-                        slot.SetItem(itemToAdd, currentAmount + amountToAdd);
-                        remaining -= amountToAdd;
-                        if (remaining <= 0)
-                            return;
-                    }
-                }
-            }
-
-            foreach (Slot slot in allSlots)
-            {
-                if (!slot.HasItem())
-                {
-                    int amountToPlace = Mathf.Min(itemToAdd.maxStackSize, remaining);
-                    slot.SetItem(itemToAdd, amountToPlace);
-                    remaining -= amountToPlace;
-                    if (remaining <= 0)
-                        return;
-                }
-            }
+            AddItemToMatchingSlots(hotbarSlots, itemToAdd, ref remaining);
+            AddItemToEmptySlots(hotbarSlots, itemToAdd, ref remaining);
+            AddItemToMatchingSlots(inventorySlots, itemToAdd, ref remaining);
+            AddItemToEmptySlots(inventorySlots, itemToAdd, ref remaining);
 
             if (remaining > 0)
             {
                 Debug.Log("Inventory is full, could not add " + remaining + " of " + itemToAdd.name);
             }
+
+            return amount - remaining;
+        }
+
+        private static void AddItemToMatchingSlots(List<Slot> slots, ItemSO itemToAdd, ref int remaining)
+        {
+            if (remaining <= 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                Slot slot = slots[i];
+                if (slot == null || !slot.HasItem() || slot.GetItem() != itemToAdd)
+                {
+                    continue;
+                }
+
+                int currentAmount = slot.GetAmount();
+                int maxStack = itemToAdd.maxStackSize;
+                if (currentAmount >= maxStack)
+                {
+                    continue;
+                }
+
+                int spaceLeft = maxStack - currentAmount;
+                int amountToAdd = Mathf.Min(spaceLeft, remaining);
+                slot.SetItem(itemToAdd, currentAmount + amountToAdd);
+                remaining -= amountToAdd;
+                if (remaining <= 0)
+                {
+                    return;
+                }
+            }
+        }
+
+        private static void AddItemToEmptySlots(List<Slot> slots, ItemSO itemToAdd, ref int remaining)
+        {
+            if (remaining <= 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                Slot slot = slots[i];
+                if (slot == null || slot.HasItem())
+                {
+                    continue;
+                }
+
+                int amountToPlace = Mathf.Min(itemToAdd.maxStackSize, remaining);
+                slot.SetItem(itemToAdd, amountToPlace);
+                remaining -= amountToPlace;
+                if (remaining <= 0)
+                {
+                    return;
+                }
+            }
+        }
+
+        private static void SortSlotsByHierarchyOrder(List<Slot> slots)
+        {
+            slots.Sort(CompareSlotsByHierarchyOrder);
+        }
+
+        private static int CompareSlotsByHierarchyOrder(Slot left, Slot right)
+        {
+            if (left == right)
+            {
+                return 0;
+            }
+
+            if (left == null)
+            {
+                return 1;
+            }
+
+            if (right == null)
+            {
+                return -1;
+            }
+
+            List<int> leftPath = GetSiblingIndexPath(left.transform);
+            List<int> rightPath = GetSiblingIndexPath(right.transform);
+            int minDepth = Mathf.Min(leftPath.Count, rightPath.Count);
+            for (int i = 0; i < minDepth; i++)
+            {
+                if (leftPath[i] != rightPath[i])
+                {
+                    return leftPath[i].CompareTo(rightPath[i]);
+                }
+            }
+
+            return leftPath.Count.CompareTo(rightPath.Count);
+        }
+
+        private static List<int> GetSiblingIndexPath(Transform target)
+        {
+            List<int> path = new List<int>();
+            while (target != null)
+            {
+                path.Add(target.GetSiblingIndex());
+                target = target.parent;
+            }
+
+            path.Reverse();
+            return path;
         }
 
         private void CacheSlots()
@@ -212,11 +302,13 @@ namespace Unity.FantasyKingdom
                 return;
             }
 
-            inventorySlots.AddRange(inventorySlotParent.GetComponentsInChildren<Slot>());
-            hotbarSlots.AddRange(hotbarObj.GetComponentsInChildren<Slot>());
+            inventorySlots.AddRange(inventorySlotParent.GetComponentsInChildren<Slot>(true));
+            hotbarSlots.AddRange(hotbarObj.GetComponentsInChildren<Slot>(true));
+            SortSlotsByHierarchyOrder(inventorySlots);
+            SortSlotsByHierarchyOrder(hotbarSlots);
 
-            allSlots.AddRange(inventorySlots);
             allSlots.AddRange(hotbarSlots);
+            allSlots.AddRange(inventorySlots);
             if (hotbarSlots.Count > 0)
             {
                 equippedHotBarIndex = Mathf.Clamp(equippedHotBarIndex, 0, hotbarSlots.Count - 1);
@@ -481,12 +573,25 @@ namespace Unity.FantasyKingdom
 
         private void Pickup()
         {
-            if (lockedItem != null && Input.GetKeyDown(KeyCode.E))
+            if (lockedItem == null || !Input.GetKeyDown(KeyCode.E))
             {
-                AddItem(lockedItem.item, lockedItem.amount);
+                return;
+            }
+
+            int pickedUpAmount = AddItem(lockedItem.item, lockedItem.amount);
+            if (pickedUpAmount <= 0)
+            {
+                return;
+            }
+
+            if (pickedUpAmount >= lockedItem.amount)
+            {
                 Destroy(lockedItem.gameObject);
                 lockedItem = null;
+                return;
             }
+
+            lockedItem.amount -= pickedUpAmount;
         }
 
         private void DetectLookedAtItem()
@@ -552,7 +657,7 @@ namespace Unity.FantasyKingdom
                 itemDetectionHits,
                 rayDistance,
                 layerMask,
-                QueryTriggerInteraction.Ignore);
+                QueryTriggerInteraction.Collide);
 
             if (hitCount <= 0)
             {
@@ -575,7 +680,22 @@ namespace Unity.FantasyKingdom
                 }
 
                 Item hitItem = hit.collider.GetComponentInParent<Item>();
-                if (hitItem == null || !IsItemWithinPickupRange(hitItem, playerRoot))
+                if (hitItem == null)
+                {
+                    if (hit.collider.isTrigger)
+                    {
+                        continue;
+                    }
+
+                    return false;
+                }
+
+                if (IsPickupTemporarilyBlocked(hitItem))
+                {
+                    continue;
+                }
+
+                if (!IsItemWithinPickupRange(hitItem, playerRoot))
                 {
                     continue;
                 }
@@ -602,7 +722,7 @@ namespace Unity.FantasyKingdom
                 pickupRange,
                 nearbyItemColliders,
                 layerMask,
-                QueryTriggerInteraction.Ignore);
+                QueryTriggerInteraction.Collide);
 
             if (colliderCount <= 0)
             {
@@ -621,7 +741,10 @@ namespace Unity.FantasyKingdom
                 }
 
                 Item candidate = nearbyCollider.GetComponentInParent<Item>();
-                if (candidate == null || candidateItems.Contains(candidate) || !IsItemWithinPickupRange(candidate, playerRoot))
+                if (candidate == null ||
+                    candidateItems.Contains(candidate) ||
+                    IsPickupTemporarilyBlocked(candidate) ||
+                    !IsItemWithinPickupRange(candidate, playerRoot))
                 {
                     continue;
                 }
@@ -676,17 +799,53 @@ namespace Unity.FantasyKingdom
             }
 
             int layerMask = Physics.DefaultRaycastLayers & ~LayerMask.GetMask("Player");
-            if (!Physics.Raycast(origin, direction.normalized, out RaycastHit hit, distance, layerMask, QueryTriggerInteraction.Ignore))
+            int hitCount = Physics.RaycastNonAlloc(
+                origin,
+                direction.normalized,
+                itemDetectionHits,
+                distance,
+                layerMask,
+                QueryTriggerInteraction.Collide);
+            if (hitCount <= 0)
             {
                 return false;
             }
 
-            if (playerRoot != null && hit.collider != null && hit.collider.transform.root == playerRoot)
+            Array.Sort(itemDetectionHits, 0, hitCount, RaycastHitDistanceComparer.Instance);
+
+            for (int i = 0; i < hitCount; i++)
             {
-                return true;
+                RaycastHit hit = itemDetectionHits[i];
+                if (hit.collider == null)
+                {
+                    continue;
+                }
+
+                if (playerRoot != null && hit.collider.transform.root == playerRoot)
+                {
+                    continue;
+                }
+
+                Item hitItem = hit.collider.GetComponentInParent<Item>();
+                if (IsPickupTemporarilyBlocked(hitItem))
+                {
+                    continue;
+                }
+
+                if (hitItem == item)
+                {
+                    return true;
+                }
+
+                if (hitItem != null || hit.collider.isTrigger)
+                {
+                    continue;
+                }
+
+                return false;
             }
 
-            return hit.collider != null && hit.collider.GetComponentInParent<Item>() == item;
+            return false;
         }
 
         private void ApplyLookedAtItemHighlight(Item item)
@@ -700,7 +859,7 @@ namespace Unity.FantasyKingdom
             for (int i = 0; i < renderers.Length; i++)
             {
                 Renderer renderer = renderers[i];
-                if (renderer == null || !renderer.enabled)
+                if (renderer == null || !renderer.enabled || !ShouldHighlightRenderer(renderer))
                 {
                     continue;
                 }
@@ -721,6 +880,13 @@ namespace Unity.FantasyKingdom
 
                 renderer.sharedMaterials = highlightMaterials;
             }
+        }
+
+        private static bool ShouldHighlightRenderer(Renderer renderer)
+        {
+            return renderer is not ParticleSystemRenderer &&
+                   renderer is not TrailRenderer &&
+                   renderer is not LineRenderer;
         }
 
         private bool TryGetItemBounds(Item item, out Bounds bounds)
@@ -875,21 +1041,185 @@ namespace Unity.FantasyKingdom
                 return;
             }
 
+            Transform playerRoot = ResolvePlayerRoot();
+            Vector3 dropForward = GetDropForward();
             Vector3 dropPosition = GetDropSpawnPosition();
             Quaternion dropRotation = Camera.main != null
-                ? Quaternion.LookRotation(GetDropForward())
+                ? Quaternion.LookRotation(dropForward)
                 : Quaternion.identity;
 
             GameObject dropped = Instantiate(prefab, dropPosition, dropRotation);
-            Item item = dropped.GetComponent<Item>();
-            if (item != null)
-            {
-                item.item = itemSO;
-                item.amount = equippedSlot.GetAmount();
-            }
+            PrepareDroppedItemForPickup(dropped, itemSO, equippedSlot.GetAmount());
+            MoveDroppedItemClearOfPlayer(dropped, playerRoot, dropForward);
+            TrackRecentlyDroppedItem(dropped);
 
             equippedSlot.ClearSlot();
             UpdateHotBarOpacity();
+        }
+
+        private static void PrepareDroppedItemForPickup(GameObject droppedObject, ItemSO itemSO, int amount)
+        {
+            if (droppedObject == null || itemSO == null)
+            {
+                return;
+            }
+
+            CollectibleItem[] collectibleItems = droppedObject.GetComponentsInChildren<CollectibleItem>(true);
+            for (int i = 0; i < collectibleItems.Length; i++)
+            {
+                if (collectibleItems[i] != null)
+                {
+                    collectibleItems[i].enabled = false;
+                }
+            }
+
+            Item rootItem = droppedObject.GetComponent<Item>();
+            if (rootItem == null)
+            {
+                rootItem = droppedObject.AddComponent<Item>();
+            }
+
+            Item[] itemComponents = droppedObject.GetComponentsInChildren<Item>(true);
+            for (int i = 0; i < itemComponents.Length; i++)
+            {
+                if (itemComponents[i] == null)
+                {
+                    continue;
+                }
+
+                itemComponents[i].item = itemSO;
+                itemComponents[i].amount = amount;
+            }
+        }
+
+        private void MoveDroppedItemClearOfPlayer(GameObject droppedObject, Transform playerRoot, Vector3 dropForward)
+        {
+            if (droppedObject == null || playerRoot == null || dropForward.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
+
+            if (!TryGetObjectBounds(droppedObject, includeTriggers: true, out Bounds droppedBounds))
+            {
+                return;
+            }
+
+            if (!TryGetObjectBounds(playerRoot.gameObject, includeTriggers: false, out Bounds playerBounds))
+            {
+                playerBounds = new Bounds(playerRoot.position + Vector3.up * 0.9f, new Vector3(0.8f, 1.8f, 0.8f));
+            }
+
+            float currentSeparation = Vector3.Dot(droppedBounds.center - playerBounds.center, dropForward);
+            float desiredSeparation =
+                GetBoundsExtentAlongAxis(playerBounds, dropForward) +
+                GetBoundsExtentAlongAxis(droppedBounds, dropForward) +
+                dropClearanceBuffer;
+            float pushDistance = desiredSeparation - currentSeparation;
+            if (pushDistance <= 0f)
+            {
+                return;
+            }
+
+            droppedObject.transform.position += dropForward * pushDistance;
+        }
+
+        private void TrackRecentlyDroppedItem(GameObject droppedObject)
+        {
+            if (droppedObject == null)
+            {
+                return;
+            }
+
+            Item droppedItem = droppedObject.GetComponent<Item>();
+            if (droppedItem == null)
+            {
+                return;
+            }
+
+            recentlyDroppedItem = droppedItem;
+            recentlyDroppedItemIgnoreUntil = Time.time + droppedItemPickupGraceDuration;
+        }
+
+        private bool IsPickupTemporarilyBlocked(Item item)
+        {
+            if (item == null || recentlyDroppedItem == null)
+            {
+                return false;
+            }
+
+            if (Time.time >= recentlyDroppedItemIgnoreUntil || recentlyDroppedItem == null)
+            {
+                recentlyDroppedItem = null;
+                recentlyDroppedItemIgnoreUntil = -1f;
+                return false;
+            }
+
+            return item == recentlyDroppedItem;
+        }
+
+        private static bool TryGetObjectBounds(GameObject targetObject, bool includeTriggers, out Bounds bounds)
+        {
+            bounds = default;
+            bool hasBounds = false;
+            Collider[] colliders = targetObject.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider collider = colliders[i];
+                if (collider == null || !collider.enabled || !collider.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (!includeTriggers && collider.isTrigger)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = collider.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(collider.bounds);
+            }
+
+            if (hasBounds)
+            {
+                return true;
+            }
+
+            Renderer[] renderers = targetObject.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            return hasBounds;
+        }
+
+        private static float GetBoundsExtentAlongAxis(Bounds bounds, Vector3 axis)
+        {
+            Vector3 normalizedAxis = axis.normalized;
+            Vector3 absoluteAxis = new Vector3(
+                Mathf.Abs(normalizedAxis.x),
+                Mathf.Abs(normalizedAxis.y),
+                Mathf.Abs(normalizedAxis.z));
+            return Vector3.Dot(bounds.extents, absoluteAxis);
         }
 
         private void RefreshEquippedHandItem(bool forceRefresh = false)
@@ -1025,17 +1355,21 @@ namespace Unity.FantasyKingdom
                 return;
             }
 
+            Vector3 prefabLocalPosition = equippedTransform.localPosition;
+            Quaternion prefabLocalRotation = equippedTransform.localRotation;
+            Vector3 prefabLocalScale = equippedTransform.localScale;
+
             if (!hasEquippedHandPose)
             {
-                equippedTransform.localPosition = Vector3.zero;
-                equippedTransform.localRotation = Quaternion.identity;
-                equippedTransform.localScale = Vector3.one;
+                equippedTransform.localPosition = prefabLocalPosition;
+                equippedTransform.localRotation = prefabLocalRotation;
+                equippedTransform.localScale = prefabLocalScale;
                 return;
             }
 
-            equippedTransform.localPosition = equippedHandLocalPosition;
-            equippedTransform.localRotation = equippedHandLocalRotation;
-            equippedTransform.localScale = equippedHandLocalScale;
+            equippedTransform.localPosition = equippedHandLocalPosition + prefabLocalPosition;
+            equippedTransform.localRotation = equippedHandLocalRotation * prefabLocalRotation;
+            equippedTransform.localScale = Vector3.Scale(equippedHandLocalScale, prefabLocalScale);
         }
 
         private Transform ResolveHandAttachPoint()
@@ -1127,7 +1461,7 @@ namespace Unity.FantasyKingdom
         {
             Transform playerRoot = ResolvePlayerRoot();
             Vector3 origin = playerRoot != null ? playerRoot.position : transform.position;
-            return origin + GetDropForward() * 1.2f + Vector3.up * 0.75f;
+            return origin + GetDropForward() * dropForwardDistance + Vector3.up * dropHeightOffset;
         }
 
         private Vector3 GetDropForward()

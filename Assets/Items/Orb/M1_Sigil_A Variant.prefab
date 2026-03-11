@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &9081834431655835782
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 108012326883433976, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_Name
+      value: M1_Sigil_A Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 7363993210273985322, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: fc5f5ac09af31ef4791b91c8e22d3e2c, type: 2}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -138.67593
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 9.82984
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -140.12337
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7946360914446471443, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 108012326883433976, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 928955649561990607}
+    - targetCorrespondingSourceObject: {fileID: 108012326883433976, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4194165943418114202}
+  m_SourcePrefab: {fileID: 100100000, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+--- !u!1 &9184692247784973694 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 108012326883433976, guid: 3efa8d90dd1f53f40b51d953227468d6, type: 3}
+  m_PrefabInstance: {fileID: 9081834431655835782}
+  m_PrefabAsset: {fileID: 0}
+--- !u!135 &928955649561990607
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9184692247784973694}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 2.56
+  m_Center: {x: -3.1, y: 0.14, z: 0.1}
+--- !u!114 &4194165943418114202
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9184692247784973694}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98a29bba1c494574b921e371f5769e6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollectibleItem
+  collectibleType: 0
+  collectibleId: M1_Sigil_A
+  missionManager: {fileID: 0}
+  objectToDisable: {fileID: 0}
+  destroyOnCollect: 1
+  inventoryItem: {fileID: 11400000, guid: 2bef68e2fc2f6e14f9ae776ae357c6a4, type: 2}
+  inventoryAmount: 1
+  inventory: {fileID: 0}
