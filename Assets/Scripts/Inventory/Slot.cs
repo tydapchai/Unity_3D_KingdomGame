@@ -37,6 +37,11 @@ namespace Unity.FantasyKingdom
 
         public void UpdateSlot()
         {
+            if (iconImage == null)
+            {
+                iconImage = transform.GetChild(0).GetComponent<Image>();
+                amountTxt = transform.GetChild(1).GetComponent<TextMeshProUGUI>();
+            }
             if (heldItem != null)
             {
                 iconImage.enabled = true;

@@ -74,6 +74,7 @@ namespace StarterAssets
 
         [Tooltip("For locking the camera position on all axis")]
         public bool LockCameraPosition = false;
+        public bool updatingRotation = true;
 
         // cinemachine
         private float _cinemachineTargetYaw;
@@ -109,6 +110,8 @@ namespace StarterAssets
         private const float _threshold = 0.01f;
 
         private bool _hasAnimator;
+
+        private bool IsGameplayInputLocked => !updatingRotation || Unity.FantasyKingdom.Inventory.IsInputBlocked;
 
         private bool IsCurrentDeviceMouse
         {
@@ -160,6 +163,11 @@ namespace StarterAssets
         {
             _hasAnimator = TryGetComponent(out _animator);
 
+            if (IsGameplayInputLocked)
+            {
+                ClearGameplayInput();
+            }
+
             JumpAndGravity();
             GroundedCheck();
             Move();
@@ -196,6 +204,11 @@ namespace StarterAssets
 
         private void CameraRotation()
         {
+            if (IsGameplayInputLocked)
+            {
+                return;
+            }
+
             // if there is an input and camera position is not fixed
             if (_input.look.sqrMagnitude >= _threshold && !LockCameraPosition)
             {
@@ -289,6 +302,19 @@ namespace StarterAssets
             //leanAnimator.User_DeliverIsAccelerating(_input.move != Vector2.zero);
             //leanAnimator.User_DeliverIsGrounded(Grounded);
             //leanAnimator.User_DeliverAccelerationSpeed(_speed);
+        }
+
+        private void ClearGameplayInput()
+        {
+            if (_input == null)
+            {
+                return;
+            }
+
+            _input.MoveInput(Vector2.zero);
+            _input.LookInput(Vector2.zero);
+            _input.JumpInput(false);
+            _input.SprintInput(false);
         }
 
         private void JumpAndGravity()

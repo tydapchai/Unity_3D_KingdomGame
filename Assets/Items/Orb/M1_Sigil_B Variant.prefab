@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &9081834431655835782
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5670501594169029037, guid: 4647e386c6ed9674b91df82032ba0352, type: 3}
+      propertyPath: m_Name
+      value: M1_Sigil_B Variant
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2705414122985005562, guid: 4647e386c6ed9674b91df82032ba0352, type: 3}
+    - {fileID: 5647461255063620419, guid: 4647e386c6ed9674b91df82032ba0352, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4647e386c6ed9674b91df82032ba0352, type: 3}
+--- !u!1 &5670501594169029037 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5670501594169029037, guid: 4647e386c6ed9674b91df82032ba0352, type: 3}
+  m_PrefabInstance: {fileID: 9081834431655835782}
+  m_PrefabAsset: {fileID: 0}
