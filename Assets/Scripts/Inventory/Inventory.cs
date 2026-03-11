@@ -1,34 +1,142 @@
+using System;
 using System.Collections.Generic;
+using StarterAssets;
+using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Unity.FantasyKingdom
 {
     public class Inventory : MonoBehaviour
     {
+        public static bool IsInputBlocked { get; private set; }
+
         public ItemSO woodItem;
         public ItemSO axeItem;
         public GameObject hotbarObj;
         public GameObject inventorySlotParent;
+        public GameObject container;
+        public Image dragIcon;
+        public float pickupRange = 3f;
+        private Item lockedItem = null;
+        public Material highlightMaterial;
+        private readonly RaycastHit[] itemDetectionHits = new RaycastHit[16];
+        private readonly Collider[] nearbyItemColliders = new Collider[32];
+        private readonly List<Item> candidateItems = new List<Item>();
+        private readonly List<Renderer> lookedAtRenderers = new List<Renderer>();
+        private readonly List<Material[]> originalRendererMaterials = new List<Material[]>();
+        private static readonly KeyCode[] HotbarKeyCodes =
+        {
+            KeyCode.Alpha1,
+            KeyCode.Alpha2,
+            KeyCode.Alpha3,
+            KeyCode.Alpha4,
+            KeyCode.Alpha5,
+            KeyCode.Alpha6
+        };
+        private static readonly KeyCode[] HotbarNumpadKeyCodes =
+        {
+            KeyCode.Keypad1,
+            KeyCode.Keypad2,
+            KeyCode.Keypad3,
+            KeyCode.Keypad4,
+            KeyCode.Keypad5,
+            KeyCode.Keypad6
+        };
+        private Transform cachedPlayerTransform;
+        [SerializeField] private KeyCode inventoryToggleKey = KeyCode.B;
+        [SerializeField] private KeyCode inventoryCursorToggleKey = KeyCode.Escape;
+
+        private int equippedHotBarIndex = 0;
+        public float equippedOpacity = 0.9f;
+        public float normalOpacity = 0.58f;
+        [SerializeField] private Color equippedSlotColor = new Color(1f, 0.92f, 0.65f, 0.9f);
+        [SerializeField] private Color normalSlotColor = new Color(1f, 1f, 1f, 0.58f);
+        [SerializeField] private string handAttachBoneName = "Wrist_R";
+        [SerializeField] private string defaultHeldVisualName = "FREE GREAT SWORD 3 COLOR 2";
+        [SerializeField] private bool hideDefaultHeldVisualWhenNoItem = true;
         private List<Slot> inventorySlots = new List<Slot>();
         private List<Slot> hotbarSlots = new List<Slot>();
         private List<Slot> allSlots = new List<Slot>();
+        private List<DisabledBehaviourState> disabledCameraBehaviours = new List<DisabledBehaviourState>();
+
+        private Slot draggedSlot = null;
+        private bool isDragging = false;
+        private bool isInventoryInteractionActive = false;
+        private Transform cachedHandAttachPoint;
+        private GameObject cachedDefaultHeldVisual;
+        private GameObject equippedHandItemInstance;
+        private ItemSO currentEquippedHandItem;
+        private int currentEquippedHandSlotIndex = -1;
+        private int currentEquippedHandAmount = -1;
+        private Vector3 equippedHandLocalPosition;
+        private Quaternion equippedHandLocalRotation = Quaternion.identity;
+        private Vector3 equippedHandLocalScale = Vector3.one;
+        private bool hasEquippedHandPose;
+
+        private struct DisabledBehaviourState
+        {
+            public Behaviour behaviour;
+            public bool wasEnabled;
+        }
+
+        private sealed class RaycastHitDistanceComparer : IComparer<RaycastHit>
+        {
+            public static readonly RaycastHitDistanceComparer Instance = new RaycastHitDistanceComparer();
+
+            public int Compare(RaycastHit left, RaycastHit right)
+            {
+                return left.distance.CompareTo(right.distance);
+            }
+        }
 
         private void Awake()
         {
             CacheSlots();
+            ResolveDragIcon();
+        }
+
+        private void Start()
+        {
+            SyncInventoryState();
+            UpdateHotBarOpacity();
+            RefreshEquippedHandItem(forceRefresh: true);
+        }
+
+        private void OnDisable()
+        {
+            ReleaseGameplayLock();
         }
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.X))
+            if (Input.GetKeyDown(inventoryToggleKey))
             {
-                AddItem(woodItem, 3);
+                ToggleInventory();
+            }
 
-            }
-            else if (Input.GetKeyDown(KeyCode.G))
+            if (Input.GetKeyDown(inventoryCursorToggleKey) && IsInventoryOpen())
             {
-                AddItem(axeItem, 1);
+                SetInventoryOpen(false);
             }
+
+            if (!isInventoryInteractionActive)
+            {
+                HandleHotBarSelection();
+                HandleDropEquippedItem();
+                RefreshEquippedHandItem();
+                UpdateHotBarOpacity();
+                DetectLookedAtItem();
+                Pickup();
+                return;
+            }
+
+            EnsureInventoryCursorState();
+            StartDrag();
+            UpdateDragItemPosition();
+            EndDrag();
+            RefreshEquippedHandItem();
+            UpdateHotBarOpacity();
         }
 
         public void AddItem(ItemSO itemToAdd, int amount)
@@ -109,6 +217,929 @@ namespace Unity.FantasyKingdom
 
             allSlots.AddRange(inventorySlots);
             allSlots.AddRange(hotbarSlots);
+            if (hotbarSlots.Count > 0)
+            {
+                equippedHotBarIndex = Mathf.Clamp(equippedHotBarIndex, 0, hotbarSlots.Count - 1);
+            }
+        }
+
+        private void StartDrag()
+        {
+            if (!Input.GetMouseButtonDown(0) || dragIcon == null)
+            {
+                return;
+            }
+
+            Slot hovered = GetHoveredSlot();
+            if (hovered != null && hovered.HasItem())
+            {
+                draggedSlot = hovered;
+                isDragging = true;
+                dragIcon.sprite = hovered.GetItem().icon;
+                dragIcon.color = new Color(1, 1, 1, 0.5f);
+                dragIcon.enabled = true;
+            }
+        }
+
+        private void EndDrag()
+        {
+            if (!Input.GetMouseButtonUp(0) || !isDragging)
+            {
+                return;
+            }
+
+            Slot hovered = GetHoveredSlot();
+            if (hovered != null)
+            {
+                HandleDrop(draggedSlot, hovered);
+            }
+
+            StopDrag();
+        }
+
+        private Slot GetHoveredSlot()
+        {
+            foreach (Slot s in allSlots)
+            {
+                if (s.hovering)
+                {
+                    return s;
+                }
+            }
+            return null;
+        }
+
+        private void HandleDrop(Slot from, Slot to)
+        {
+            if (from == to) return;
+            if (to.HasItem() && to.GetItem() == from.GetItem())
+            {
+                int max = to.GetItem().maxStackSize;
+                int space = max - to.GetAmount();
+
+                if (space > 0)
+                {
+                    int move = Mathf.Min(space, from.GetAmount());
+                    to.SetItem(to.GetItem(), to.GetAmount() + move);
+                    from.SetItem(from.GetItem(), from.GetAmount() - move);
+
+                    if (from.GetAmount() <= 0)
+                    {
+                        from.ClearSlot();
+                    }
+
+                    return;
+                }
+            }
+
+            if (to.HasItem())
+            {
+                ItemSO tempItem = to.GetItem();
+                int tempAmount = to.GetAmount();
+
+                to.SetItem(from.GetItem(), from.GetAmount());
+                from.SetItem(tempItem, tempAmount);
+                return;
+            }
+
+            to.SetItem(from.GetItem(), from.GetAmount());
+            from.ClearSlot();
+        }
+
+        private void UpdateDragItemPosition()
+        {
+            if (isDragging)
+            {
+                dragIcon.transform.position = Input.mousePosition;
+            }
+        }
+
+        private void ResolveDragIcon()
+        {
+            if (dragIcon == null)
+            {
+                foreach (Image image in GetComponentsInChildren<Image>(true))
+                {
+                    if (image.gameObject.name == "DragItem")
+                    {
+                        dragIcon = image;
+                        break;
+                    }
+                }
+            }
+
+            if (dragIcon != null)
+            {
+                dragIcon.raycastTarget = false;
+            }
+        }
+
+        private void SetInventoryInteraction(bool isActive)
+        {
+            if (isInventoryInteractionActive == isActive &&
+                IsInputBlocked == isActive)
+            {
+                if (isActive)
+                {
+                    EnsureInventoryCursorState();
+                }
+
+                return;
+            }
+
+            isInventoryInteractionActive = isActive;
+            IsInputBlocked = isActive;
+            bool gameplayEnabled = !isActive;
+
+            if (isActive)
+            {
+                ClearLookedAtItemHighlight();
+            }
+
+            ApplyStarterAssetsInputState(gameplayEnabled);
+            ApplyCinemachineInventoryState(isActive);
+
+            if (isActive)
+            {
+                EnsureInventoryCursorState();
+            }
+            else
+            {
+                StopDrag();
+            }
+        }
+
+        private void ApplyStarterAssetsInputState(bool gameplayEnabled)
+        {
+            StarterAssetsInputs[] inputs = FindObjectsByType<StarterAssetsInputs>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+
+            if (inputs.Length == 0)
+            {
+                Cursor.lockState = gameplayEnabled ? CursorLockMode.Locked : CursorLockMode.None;
+                Cursor.visible = !gameplayEnabled;
+                return;
+            }
+
+            foreach (StarterAssetsInputs input in inputs)
+            {
+                if (input == null)
+                {
+                    continue;
+                }
+
+                input.cursorInputForLook = gameplayEnabled;
+                input.MoveInput(Vector2.zero);
+                input.LookInput(Vector2.zero);
+                input.JumpInput(false);
+                input.SprintInput(false);
+                input.SetCursorState(gameplayEnabled);
+            }
+        }
+
+        private void ApplyCinemachineInventoryState(bool isInventoryOpen)
+        {
+            if (!isInventoryOpen)
+            {
+                RestoreCameraBehaviours();
+                return;
+            }
+
+            disabledCameraBehaviours.Clear();
+            CacheAndDisableBehaviours(FindObjectsByType<CinemachineFreeLook>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None));
+            CacheAndDisableBehaviours(FindObjectsByType<CinemachineInputProvider>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None));
+        }
+
+        private void CacheAndDisableBehaviours<T>(T[] behaviours) where T : Behaviour
+        {
+            foreach (T behaviour in behaviours)
+            {
+                if (behaviour == null)
+                {
+                    continue;
+                }
+
+                disabledCameraBehaviours.Add(new DisabledBehaviourState
+                {
+                    behaviour = behaviour,
+                    wasEnabled = behaviour.enabled
+                });
+                behaviour.enabled = false;
+            }
+        }
+
+        private void RestoreCameraBehaviours()
+        {
+            foreach (DisabledBehaviourState state in disabledCameraBehaviours)
+            {
+                if (state.behaviour != null)
+                {
+                    state.behaviour.enabled = state.wasEnabled;
+                }
+            }
+
+            disabledCameraBehaviours.Clear();
+        }
+
+        private void EnsureInventoryCursorState()
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        private void ReleaseGameplayLock()
+        {
+            if (!isInventoryInteractionActive && !IsInputBlocked &&
+                disabledCameraBehaviours.Count == 0)
+            {
+                return;
+            }
+
+            RestoreCameraBehaviours();
+            IsInputBlocked = false;
+            isInventoryInteractionActive = false;
+            ApplyStarterAssetsInputState(true);
+            StopDrag();
+        }
+
+        private void StopDrag()
+        {
+            if (dragIcon != null)
+            {
+                dragIcon.enabled = false;
+                dragIcon.sprite = null;
+            }
+
+            draggedSlot = null;
+            isDragging = false;
+        }
+
+        private void Pickup()
+        {
+            if (lockedItem != null && Input.GetKeyDown(KeyCode.E))
+            {
+                AddItem(lockedItem.item, lockedItem.amount);
+                Destroy(lockedItem.gameObject);
+                lockedItem = null;
+            }
+        }
+
+        private void DetectLookedAtItem()
+        {
+            ClearLookedAtItemHighlight();
+
+            Camera activeCamera = Camera.main;
+            if (isInventoryInteractionActive || activeCamera == null)
+            {
+                return;
+            }
+
+            Transform playerRoot = ResolvePlayerRoot();
+            if (!TryGetLookedAtItem(activeCamera, playerRoot, out Item item))
+            {
+                return;
+            }
+
+            lockedItem = item;
+            ApplyLookedAtItemHighlight(item);
+        }
+
+        private void ClearLookedAtItemHighlight()
+        {
+            for (int i = 0; i < lookedAtRenderers.Count; i++)
+            {
+                Renderer renderer = lookedAtRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                renderer.sharedMaterials = originalRendererMaterials[i];
+            }
+
+            lookedAtRenderers.Clear();
+            originalRendererMaterials.Clear();
+            lockedItem = null;
+        }
+
+        private bool TryGetLookedAtItem(Camera activeCamera, Transform playerRoot, out Item item)
+        {
+            int layerMask = Physics.DefaultRaycastLayers & ~LayerMask.GetMask("Player");
+            Ray centerRay = activeCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
+            if (TryGetItemFromRay(centerRay, GetPickupRayDistance(activeCamera, playerRoot), layerMask, playerRoot, out item))
+            {
+                return true;
+            }
+
+            return TryGetItemNearScreenCenter(activeCamera, playerRoot, out item);
+        }
+
+        private bool TryGetItemFromRay(
+            Ray ray,
+            float rayDistance,
+            int layerMask,
+            Transform playerRoot,
+            out Item item)
+        {
+            item = null;
+            int hitCount = Physics.RaycastNonAlloc(
+                ray,
+                itemDetectionHits,
+                rayDistance,
+                layerMask,
+                QueryTriggerInteraction.Ignore);
+
+            if (hitCount <= 0)
+            {
+                return false;
+            }
+
+            Array.Sort(itemDetectionHits, 0, hitCount, RaycastHitDistanceComparer.Instance);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = itemDetectionHits[i];
+                if (hit.collider == null)
+                {
+                    continue;
+                }
+
+                if (playerRoot != null && hit.collider.transform.root == playerRoot)
+                {
+                    continue;
+                }
+
+                Item hitItem = hit.collider.GetComponentInParent<Item>();
+                if (hitItem == null || !IsItemWithinPickupRange(hitItem, playerRoot))
+                {
+                    continue;
+                }
+
+                if (!TryGetItemBounds(hitItem, out Bounds bounds))
+                {
+                    continue;
+                }
+
+                item = hitItem;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetItemNearScreenCenter(Camera activeCamera, Transform playerRoot, out Item item)
+        {
+            item = null;
+            Vector3 overlapOrigin = playerRoot != null ? playerRoot.position : activeCamera.transform.position;
+            int layerMask = Physics.DefaultRaycastLayers & ~LayerMask.GetMask("Player");
+            int colliderCount = Physics.OverlapSphereNonAlloc(
+                overlapOrigin,
+                pickupRange,
+                nearbyItemColliders,
+                layerMask,
+                QueryTriggerInteraction.Ignore);
+
+            if (colliderCount <= 0)
+            {
+                return false;
+            }
+
+            candidateItems.Clear();
+            float bestScore = float.MaxValue;
+
+            for (int i = 0; i < colliderCount; i++)
+            {
+                Collider nearbyCollider = nearbyItemColliders[i];
+                if (nearbyCollider == null)
+                {
+                    continue;
+                }
+
+                Item candidate = nearbyCollider.GetComponentInParent<Item>();
+                if (candidate == null || candidateItems.Contains(candidate) || !IsItemWithinPickupRange(candidate, playerRoot))
+                {
+                    continue;
+                }
+
+                candidateItems.Add(candidate);
+                if (!TryGetItemBounds(candidate, out Bounds bounds))
+                {
+                    continue;
+                }
+
+                Vector3 viewportPoint = activeCamera.WorldToViewportPoint(bounds.center);
+                if (viewportPoint.z <= 0f)
+                {
+                    continue;
+                }
+
+                float viewportOffset = Vector2.Distance(
+                    new Vector2(viewportPoint.x, viewportPoint.y),
+                    new Vector2(0.5f, 0.5f));
+                if (viewportOffset > 0.35f)
+                {
+                    continue;
+                }
+
+                if (!HasLineOfSight(activeCamera, bounds.center, candidate, playerRoot))
+                {
+                    continue;
+                }
+
+                float distanceScore = playerRoot != null
+                    ? Vector3.Distance(playerRoot.position, candidate.transform.position)
+                    : Vector3.Distance(activeCamera.transform.position, candidate.transform.position);
+                float score = viewportOffset + distanceScore * 0.1f;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    item = candidate;
+                }
+            }
+
+            return item != null;
+        }
+
+        private bool HasLineOfSight(Camera activeCamera, Vector3 targetPoint, Item item, Transform playerRoot)
+        {
+            Vector3 origin = activeCamera.transform.position;
+            Vector3 direction = targetPoint - origin;
+            float distance = direction.magnitude;
+            if (distance <= Mathf.Epsilon)
+            {
+                return false;
+            }
+
+            int layerMask = Physics.DefaultRaycastLayers & ~LayerMask.GetMask("Player");
+            if (!Physics.Raycast(origin, direction.normalized, out RaycastHit hit, distance, layerMask, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            if (playerRoot != null && hit.collider != null && hit.collider.transform.root == playerRoot)
+            {
+                return true;
+            }
+
+            return hit.collider != null && hit.collider.GetComponentInParent<Item>() == item;
+        }
+
+        private void ApplyLookedAtItemHighlight(Item item)
+        {
+            Renderer[] renderers = item.GetComponentsInChildren<Renderer>(false);
+            if (renderers.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                lookedAtRenderers.Add(renderer);
+                originalRendererMaterials.Add(renderer.sharedMaterials);
+
+                if (highlightMaterial == null)
+                {
+                    continue;
+                }
+
+                Material[] highlightMaterials = new Material[renderer.sharedMaterials.Length];
+                for (int j = 0; j < highlightMaterials.Length; j++)
+                {
+                    highlightMaterials[j] = highlightMaterial;
+                }
+
+                renderer.sharedMaterials = highlightMaterials;
+            }
+        }
+
+        private bool TryGetItemBounds(Item item, out Bounds bounds)
+        {
+            Renderer[] renderers = item.GetComponentsInChildren<Renderer>(false);
+            bool foundBounds = false;
+            bounds = default;
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                if (!foundBounds)
+                {
+                    bounds = renderer.bounds;
+                    foundBounds = true;
+                    continue;
+                }
+
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            return foundBounds;
+        }
+
+        private Transform ResolvePlayerRoot()
+        {
+            if (cachedPlayerTransform != null)
+            {
+                return cachedPlayerTransform.root;
+            }
+
+            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject == null)
+            {
+                return null;
+            }
+
+            cachedPlayerTransform = playerObject.transform;
+            return cachedPlayerTransform.root;
+        }
+
+        private float GetPickupRayDistance(Camera activeCamera, Transform playerRoot)
+        {
+            if (activeCamera == null || playerRoot == null)
+            {
+                return pickupRange;
+            }
+
+            return pickupRange + Vector3.Distance(activeCamera.transform.position, playerRoot.position);
+        }
+
+        private bool IsItemWithinPickupRange(Item item, Transform playerRoot)
+        {
+            if (item == null || playerRoot == null)
+            {
+                return true;
+            }
+
+            return Vector3.Distance(playerRoot.position, item.transform.position) <= pickupRange;
+        }
+
+        private void ToggleInventory()
+        {
+            SetInventoryOpen(!IsInventoryOpen());
+        }
+
+        private void SetInventoryOpen(bool isOpen)
+        {
+            if (container != null)
+            {
+                container.SetActive(isOpen);
+            }
+
+            SetInventoryInteraction(isOpen);
+        }
+
+        private bool IsInventoryOpen()
+        {
+            return container != null && container.activeInHierarchy;
+        }
+
+        private void SyncInventoryState()
+        {
+            SetInventoryInteraction(IsInventoryOpen());
+        }
+
+        private void UpdateHotBarOpacity()
+        {
+            if (hotbarSlots.Count == 0)
+            {
+                return;
+            }
+
+            equippedHotBarIndex = Mathf.Clamp(equippedHotBarIndex, 0, hotbarSlots.Count - 1);
+            for (int i = 0; i < hotbarSlots.Count; i++)
+            {
+                Image slotBackground = hotbarSlots[i].GetComponent<Image>();
+                if (slotBackground != null)
+                {
+                    Color targetColor = i == equippedHotBarIndex ? equippedSlotColor : normalSlotColor;
+                    targetColor.a = i == equippedHotBarIndex ? equippedOpacity : normalOpacity;
+                    slotBackground.color = targetColor;
+                }
+
+                if (hotbarSlots[i].iconImage != null)
+                {
+                    Color iconColor = hotbarSlots[i].iconImage.color;
+                    iconColor.a = hotbarSlots[i].HasItem() ? 1f : 0f;
+                    hotbarSlots[i].iconImage.color = iconColor;
+                }
+            }
+        }
+
+        private void HandleHotBarSelection()
+        {
+            int slotCount = Mathf.Min(hotbarSlots.Count, HotbarKeyCodes.Length);
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (Input.GetKeyDown(HotbarKeyCodes[i]) || Input.GetKeyDown(HotbarNumpadKeyCodes[i]))
+                {
+                    equippedHotBarIndex = i;
+                    return;
+                }
+            }
+        }
+
+        private void HandleDropEquippedItem()
+        {
+            if (!Input.GetKeyDown(KeyCode.G) || hotbarSlots.Count == 0)
+            {
+                return;
+            }
+
+            equippedHotBarIndex = Mathf.Clamp(equippedHotBarIndex, 0, hotbarSlots.Count - 1);
+            Slot equippedSlot = hotbarSlots[equippedHotBarIndex];
+            if (!equippedSlot.HasItem())
+            {
+                return;
+            }
+
+            ItemSO itemSO = equippedSlot.GetItem();
+            GameObject prefab = itemSO.itemPrefab;
+
+            if (prefab == null)
+            {
+                Debug.LogWarning($"Item '{itemSO.name}' does not have an item prefab to drop.");
+                return;
+            }
+
+            Vector3 dropPosition = GetDropSpawnPosition();
+            Quaternion dropRotation = Camera.main != null
+                ? Quaternion.LookRotation(GetDropForward())
+                : Quaternion.identity;
+
+            GameObject dropped = Instantiate(prefab, dropPosition, dropRotation);
+            Item item = dropped.GetComponent<Item>();
+            if (item != null)
+            {
+                item.item = itemSO;
+                item.amount = equippedSlot.GetAmount();
+            }
+
+            equippedSlot.ClearSlot();
+            UpdateHotBarOpacity();
+        }
+
+        private void RefreshEquippedHandItem(bool forceRefresh = false)
+        {
+            if (hotbarSlots.Count == 0)
+            {
+                ApplyEquippedHandItem(null, -1, 0);
+                return;
+            }
+
+            equippedHotBarIndex = Mathf.Clamp(equippedHotBarIndex, 0, hotbarSlots.Count - 1);
+            Slot equippedSlot = hotbarSlots[equippedHotBarIndex];
+            ItemSO equippedItem = equippedSlot.HasItem() ? equippedSlot.GetItem() : null;
+            int equippedAmount = equippedSlot.HasItem() ? equippedSlot.GetAmount() : 0;
+
+            if (!forceRefresh &&
+                currentEquippedHandItem == equippedItem &&
+                currentEquippedHandSlotIndex == equippedHotBarIndex &&
+                currentEquippedHandAmount == equippedAmount &&
+                (equippedItem == null || equippedHandItemInstance != null))
+            {
+                return;
+            }
+
+            ApplyEquippedHandItem(equippedItem, equippedHotBarIndex, equippedAmount);
+        }
+
+        private void ApplyEquippedHandItem(ItemSO itemToEquip, int slotIndex, int amount)
+        {
+            currentEquippedHandItem = itemToEquip;
+            currentEquippedHandSlotIndex = slotIndex;
+            currentEquippedHandAmount = amount;
+
+            Transform attachPoint = ResolveHandAttachPoint();
+            GameObject defaultHeldVisual = ResolveDefaultHeldVisual();
+
+            if (equippedHandItemInstance != null)
+            {
+                Destroy(equippedHandItemInstance);
+                equippedHandItemInstance = null;
+            }
+
+            if (defaultHeldVisual != null)
+            {
+                defaultHeldVisual.SetActive(!hideDefaultHeldVisualWhenNoItem && itemToEquip == null);
+            }
+
+            if (attachPoint == null || itemToEquip == null)
+            {
+                return;
+            }
+
+            GameObject handVisualPrefab = ResolveHandVisualPrefab(itemToEquip);
+            if (handVisualPrefab == null)
+            {
+                return;
+            }
+
+            if (defaultHeldVisual != null)
+            {
+                defaultHeldVisual.SetActive(false);
+            }
+
+            equippedHandItemInstance = Instantiate(handVisualPrefab, attachPoint, false);
+            equippedHandItemInstance.name = $"{handVisualPrefab.name}_Equipped";
+            ApplyEquippedHandPose(equippedHandItemInstance.transform);
+            PrepareHandVisualInstance(equippedHandItemInstance, itemToEquip.handItemPrefab == null);
+        }
+
+        private GameObject ResolveHandVisualPrefab(ItemSO item)
+        {
+            if (item == null)
+            {
+                return null;
+            }
+
+            if (item.handItemPrefab != null)
+            {
+                return item.handItemPrefab;
+            }
+
+            return item.itemPrefab;
+        }
+
+        private void PrepareHandVisualInstance(GameObject handVisualInstance, bool isFallbackVisual)
+        {
+            if (handVisualInstance == null)
+            {
+                return;
+            }
+
+            foreach (Collider collider in handVisualInstance.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+            }
+
+            foreach (Rigidbody body in handVisualInstance.GetComponentsInChildren<Rigidbody>(true))
+            {
+                body.isKinematic = true;
+                body.useGravity = false;
+                body.detectCollisions = false;
+            }
+
+            foreach (MonoBehaviour behaviour in handVisualInstance.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                behaviour.enabled = false;
+            }
+
+            if (!isFallbackVisual)
+            {
+                return;
+            }
+
+            foreach (Transform child in handVisualInstance.GetComponentsInChildren<Transform>(true))
+            {
+                if (child == handVisualInstance.transform)
+                {
+                    continue;
+                }
+
+                if (child.name.Equals("Quad", StringComparison.OrdinalIgnoreCase) ||
+                    child.name.Equals("Cube", StringComparison.OrdinalIgnoreCase))
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        private void ApplyEquippedHandPose(Transform equippedTransform)
+        {
+            if (equippedTransform == null)
+            {
+                return;
+            }
+
+            if (!hasEquippedHandPose)
+            {
+                equippedTransform.localPosition = Vector3.zero;
+                equippedTransform.localRotation = Quaternion.identity;
+                equippedTransform.localScale = Vector3.one;
+                return;
+            }
+
+            equippedTransform.localPosition = equippedHandLocalPosition;
+            equippedTransform.localRotation = equippedHandLocalRotation;
+            equippedTransform.localScale = equippedHandLocalScale;
+        }
+
+        private Transform ResolveHandAttachPoint()
+        {
+            if (cachedHandAttachPoint != null)
+            {
+                return cachedHandAttachPoint;
+            }
+
+            GameObject defaultHeldVisual = ResolveDefaultHeldVisual();
+            if (defaultHeldVisual != null && defaultHeldVisual.transform.parent != null)
+            {
+                cachedHandAttachPoint = defaultHeldVisual.transform.parent;
+                CacheEquippedHandPose(defaultHeldVisual.transform);
+                return cachedHandAttachPoint;
+            }
+
+            Transform playerRoot = ResolvePlayerRoot();
+            if (playerRoot == null)
+            {
+                return null;
+            }
+
+            cachedHandAttachPoint = FindChildRecursive(playerRoot, handAttachBoneName);
+            return cachedHandAttachPoint;
+        }
+
+        private GameObject ResolveDefaultHeldVisual()
+        {
+            if (cachedDefaultHeldVisual != null)
+            {
+                return cachedDefaultHeldVisual;
+            }
+
+            Transform playerRoot = ResolvePlayerRoot();
+            if (playerRoot == null)
+            {
+                return null;
+            }
+
+            Transform defaultHeldTransform = FindChildRecursive(playerRoot, defaultHeldVisualName);
+            if (defaultHeldTransform == null)
+            {
+                return null;
+            }
+
+            cachedDefaultHeldVisual = defaultHeldTransform.gameObject;
+            CacheEquippedHandPose(defaultHeldTransform);
+            if (defaultHeldTransform.parent != null)
+            {
+                cachedHandAttachPoint = defaultHeldTransform.parent;
+            }
+
+            return cachedDefaultHeldVisual;
+        }
+
+        private void CacheEquippedHandPose(Transform sourceTransform)
+        {
+            if (sourceTransform == null || hasEquippedHandPose)
+            {
+                return;
+            }
+
+            equippedHandLocalPosition = sourceTransform.localPosition;
+            equippedHandLocalRotation = sourceTransform.localRotation;
+            equippedHandLocalScale = sourceTransform.localScale;
+            hasEquippedHandPose = true;
+        }
+
+        private Transform FindChildRecursive(Transform root, string childName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(childName))
+            {
+                return null;
+            }
+
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name.Equals(childName, StringComparison.Ordinal))
+                {
+                    return child;
+                }
+            }
+
+            return null;
+        }
+
+        private Vector3 GetDropSpawnPosition()
+        {
+            Transform playerRoot = ResolvePlayerRoot();
+            Vector3 origin = playerRoot != null ? playerRoot.position : transform.position;
+            return origin + GetDropForward() * 1.2f + Vector3.up * 0.75f;
+        }
+
+        private Vector3 GetDropForward()
+        {
+            Vector3 forward = Camera.main != null ? Camera.main.transform.forward : transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.01f)
+            {
+                return Vector3.forward;
+            }
+
+            return forward.normalized;
         }
     }
 }

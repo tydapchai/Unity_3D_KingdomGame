@@ -78,6 +78,7 @@ namespace Unity.FantasyKingdom
         [Space]
         [Header("Settings")]
         public CameraControllerSettings[] Settings;
+        public bool updatingRotation = true;
 
         [Tooltip("How far high the camera is")]
         public float CameraDistance;
@@ -123,6 +124,7 @@ namespace Unity.FantasyKingdom
         private bool midPointFired;
         private ZoomLevelData _zoomLevelData;
         private ZoomLevelData _prevZoomLevelData;
+        private bool IsGameplayInputLocked => !updatingRotation || Inventory.IsInputBlocked;
         public enum CameraType
         {
             GameplayCamera = 0,
@@ -168,6 +170,22 @@ namespace Unity.FantasyKingdom
         {
             _currentMousePosition = _inputProvider.MousePosition;
 
+            if (IsGameplayInputLocked)
+            {
+                if (_isRotating)
+                {
+                    LockMouse(false);
+                    _isRotating = false;
+                    OnRotateStopped?.Invoke(this, EventArgs.Empty);
+                }
+
+                _targetCameraRotate = _currentCameraRotate;
+                _targetCameraTilt = _currentCameraTilt;
+                _cameraRotateSmoothDampVelRef = 0f;
+                _cameraTiltSmoothDampVelRef = 0f;
+                return;
+            }
+ 
             if (Application.isMobilePlatform)
             {
                 HandleTouchDrag();
