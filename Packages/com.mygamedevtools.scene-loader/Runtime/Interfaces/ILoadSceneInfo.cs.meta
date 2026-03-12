@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 61c9a0dd68f561549bc0d61bd28037ae
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Runtime/Interfaces/ILoadSceneInfo.cs
+  uploadId: 852174

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d6dc9d379ebdf9044808e8d344a75da0
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples~/LoadingSceneExamples/Scenes/SceneB.unity
+  uploadId: 852174

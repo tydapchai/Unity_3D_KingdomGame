@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3bcac63371667784ba45e222c637426d
+PackageManifestImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/package.json
+  uploadId: 852174

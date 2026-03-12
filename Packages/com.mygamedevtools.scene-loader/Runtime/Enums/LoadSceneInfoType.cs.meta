@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: f358dc5c030e8c44082e572fb34f1b94
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Runtime/Enums/LoadSceneInfoType.cs
+  uploadId: 852174

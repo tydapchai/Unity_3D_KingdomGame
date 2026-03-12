@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 86412405a5b304e44bcea539864a36ab
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples~/LoadingSceneExamples/Scripts/Runtime/AnimatedTrigger.cs
+  uploadId: 852174

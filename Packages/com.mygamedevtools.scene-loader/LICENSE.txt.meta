@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1a9c44f367cac8a4892345e7d7405ed7
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/LICENSE.txt
+  uploadId: 852174

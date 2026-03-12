@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c4d84a31cd55c924da62d2078c89d4c6
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Runtime/Structs/AsyncSceneOperationStandard.cs
+  uploadId: 852174

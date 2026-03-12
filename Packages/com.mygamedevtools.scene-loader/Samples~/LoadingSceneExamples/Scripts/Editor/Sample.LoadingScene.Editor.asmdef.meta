@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7479c7f3f090a70479be9cf477703a60
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples~/LoadingSceneExamples/Scripts/Editor/Sample.LoadingScene.Editor.asmdef
+  uploadId: 852174

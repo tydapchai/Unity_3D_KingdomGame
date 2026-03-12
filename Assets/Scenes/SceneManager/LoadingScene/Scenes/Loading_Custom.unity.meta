@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e0094647c619f9c479fb11636924890e
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples/LoadingSceneExamples/Scenes/Loading_Custom.unity
+  uploadId: 852174

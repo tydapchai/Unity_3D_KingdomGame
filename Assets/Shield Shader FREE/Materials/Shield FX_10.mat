@@ -21,8 +21,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Shield FX_10
-  m_Shader: {fileID: -6465566751694194690, guid: 7273ade5faebcb9448394e807492b217,
-    type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: 7273ade5faebcb9448394e807492b217, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -104,13 +103,14 @@ Material:
     - _Emission_Color: {r: 0, g: 0, b: 0, a: 0}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Offset_Tex_2: {r: 1, g: 1, b: 0, a: 0}
-    - _Texture_1_Color: {r: 10.237705, g: 0, b: 45.254833, a: 0}
+    - _Texture_1_Color: {r: 0, g: 45.25485, b: 31.527145, a: 0}
     - _Texture_2D_Color: {r: 0, g: 11.984314, b: 8.282353, a: 0}
     - _Texture_2_Color: {r: 0, g: 0.47056308, b: 11.984314, a: 0}
     - _Tile_X_Y: {r: 15.14, g: 33.7, b: 0, a: 0}
     - _Tiling: {r: 3, g: 3, b: 0, a: 0}
     - _Tiling_Tex_2: {r: 2, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &5565035484657618864
 MonoBehaviour:
   m_ObjectHideFlags: 11
