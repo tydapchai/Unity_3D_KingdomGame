@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2cae1f6280e4f78409eeb7d01a1ab00b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples/LoadingSceneExamples/Materials/M_Box.mat
+  uploadId: 852174

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0b51ebc09bbfe624d8c5427c1e3c295d
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Tests/Runtime/MyGameDevTools.SceneLoading.Tests.asmdef
+  uploadId: 852174

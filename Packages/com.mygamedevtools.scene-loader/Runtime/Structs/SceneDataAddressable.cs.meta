@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6e0b7de3f678c3d4c9d187c2059ccf87
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Runtime/Structs/SceneDataAddressable.cs
+  uploadId: 852174

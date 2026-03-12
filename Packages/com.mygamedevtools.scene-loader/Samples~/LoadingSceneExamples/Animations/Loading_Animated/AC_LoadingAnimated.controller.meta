@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 400552a45bd9bf845a6dc65a0b80efe7
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples~/LoadingSceneExamples/Animations/Loading_Animated/AC_LoadingAnimated.controller
+  uploadId: 852174

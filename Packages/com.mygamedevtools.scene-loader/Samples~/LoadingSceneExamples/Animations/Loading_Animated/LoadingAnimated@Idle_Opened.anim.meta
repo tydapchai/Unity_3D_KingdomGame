@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a2bbef94a5f31e5418bf4f78cb08a7da
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples~/LoadingSceneExamples/Animations/Loading_Animated/LoadingAnimated@Idle_Opened.anim
+  uploadId: 852174

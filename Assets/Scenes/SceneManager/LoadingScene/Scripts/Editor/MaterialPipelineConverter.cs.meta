@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: 35ef34a8ee68e684588480a73ab173eb
+AssetOrigin:
+  serializedVersion: 1
+  productId: 313159
+  packageName: My Scene Manager
+  packageVersion: 4.1.0
+  assetPath: Packages/com.mygamedevtools.scene-loader/Samples/LoadingSceneExamples/Scripts/Editor/MaterialPipelineConverter.cs
+  uploadId: 852174
