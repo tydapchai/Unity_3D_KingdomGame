@@ -16,6 +16,7 @@ public class EnemyBase : MonoBehaviour
     [Header("VFX & UI")]
     [SerializeField] private GameObject hitVfx;
     [SerializeField] private GameObject activeTargetObject;
+    private EnemyAI enemyAI;
 
     // Start is called before the first frame update
     void Start()
@@ -28,18 +29,19 @@ public class EnemyBase : MonoBehaviour
         // Tự động tìm Component nếu bạn quên kéo thả trong Inspector
         if (anim == null) anim = GetComponent<Animator>();
         if (enemyCollider == null) enemyCollider = GetComponent<Collider>();
+        enemyAI = GetComponent<EnemyAI>();
     }
 
     // Hàm nhận sát thương (Player sẽ gọi hàm này khi chém trúng)
-    public void TakeDamage(float damageAmount)
+    public void TakeDamage(float damageAmount, bool playDefaultHitReaction = true)
     {
         if (isDead) return; // Nếu chết rồi thì bỏ qua
 
         currentHealth -= damageAmount;
         Debug.Log(gameObject.name + " nhận " + damageAmount + " sát thương! Máu còn: " + currentHealth);
 
-        // Chạy Animation giật lùi (Hit Reaction) nếu có
-        if (anim != null)
+        // Enemy có AI sẽ dùng hit reaction riêng trong EnemyAI để tránh animation chồng lên stagger/knockback.
+        if (playDefaultHitReaction && enemyAI == null && anim != null)
         {
             anim.SetTrigger("Hit");
         }

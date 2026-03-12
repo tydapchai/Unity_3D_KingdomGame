@@ -35,16 +35,25 @@ public class EnemyAI : MonoBehaviour
     public int maxPoise = 3;
     private int currentPoise;
     public float staggerDuration = 0.5f; // Thời gian khựng
+    [Header("Hit Reaction")]
+    [Tooltip("Mỗi hit thường sẽ lùi nhẹ theo tỉ lệ này so với knockbackForce từ Player.")]
+    [Range(0f, 1f)] public float lightHitKnockbackMultiplier = 0.35f;
+    public float lightHitRecoveryTime = 0.08f;
+    public float lightHitFriction = 18f;
+    public float staggerKnockbackMultiplier = 1.5f;
+    public float staggerFriction = 10f;
 
     private Vector3 patrolDestination;
     private float idleTimer;
     public float waitTimeAtPoint = 2f;
+    private Coroutine knockbackRoutine;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         anim = GetComponent<Animator>();
         enemyBase = GetComponent<EnemyBase>();
+        maxPoise = Mathf.Max(1, maxPoise);
         currentPoise = maxPoise;
 
         if (playerTarget == null)
@@ -96,58 +105,112 @@ public class EnemyAI : MonoBehaviour
     // --- CƠ CHẾ KNOCKBACK & STAGGER CHUẨN SOULS ---
     public void TakeHit(Vector3 attackerPos, float knockbackForce)
     {
+        if (enemyBase != null && enemyBase.isDead)
+        {
+            return;
+        }
+
+        if (currentState == AIState.Staggered)
+        {
+            return;
+        }
+
         currentPoise--;
 
         if (currentPoise <= 0)
         {
             // Bị phá thế (Stagger)
             currentPoise = maxPoise; // Reset lại poise
-            StartCoroutine(KnockbackRoutine(attackerPos, knockbackForce));
+            StartKnockback(attackerPos, knockbackForce * staggerKnockbackMultiplier, staggerFriction, staggerDuration, "Stagger", true);
         }
         else
         {
-            // Chỉ phát hiệu ứng bị thương nhẹ (nếu bạn có animation GetHit nhẹ)
-            anim.SetTrigger("GetHit");
+            // Hit thường vẫn lùi nhẹ để cảm giác trúng đòn rõ ràng hơn.
+            if (lightHitKnockbackMultiplier <= 0f)
+            {
+                if (anim != null)
+                {
+                    anim.SetTrigger("GetHit");
+                }
+
+                return;
+            }
+
+            StartKnockback(attackerPos, knockbackForce * lightHitKnockbackMultiplier, lightHitFriction, lightHitRecoveryTime, "GetHit", false);
         }
     }
 
-    private System.Collections.IEnumerator KnockbackRoutine(Vector3 attackerPos, float force)
+    private void StartKnockback(Vector3 attackerPos, float force, float friction, float recoveryTime, string animationTrigger, bool faceAttacker)
+    {
+        if (knockbackRoutine != null)
+        {
+            StopCoroutine(knockbackRoutine);
+        }
+
+        knockbackRoutine = StartCoroutine(KnockbackRoutine(attackerPos, force, friction, recoveryTime, animationTrigger, faceAttacker));
+    }
+
+    private System.Collections.IEnumerator KnockbackRoutine(Vector3 attackerPos, float force, float friction, float recoveryTime, string animationTrigger, bool faceAttacker)
     {
         currentState = AIState.Staggered;
         isAttacking = false;
         agent.isStopped = true;
+        agent.ResetPath();
 
         // Tính hướng đẩy lùi (từ Player hướng về Enemy)
-        Vector3 knockbackDir = (transform.position - attackerPos).normalized;
+        Vector3 knockbackDir = transform.position - attackerPos;
         knockbackDir.y = 0;
 
-        // Quay mặt về phía người chơi
-        transform.rotation = Quaternion.LookRotation(-knockbackDir);
+        if (knockbackDir.sqrMagnitude <= 0.001f)
+        {
+            knockbackDir = -transform.forward;
+        }
 
-        anim.SetTrigger("Stagger");
+        knockbackDir.Normalize();
 
-        // MÔ PHỎNG RIGIDBODY IMPULSE
-        // Chúng ta đặt vận tốc ban đầu rất lớn rồi giảm dần theo thời gian
-        float currentForce = force * 1.5f; // Nhân hệ số để cú đánh có sức nặng
-        float friction = 10f;             // Độ ma sát (càng cao dừng càng nhanh)
+        if (faceAttacker)
+        {
+            // Quay mặt về phía người chơi ở cú stagger mạnh để hit reaction rõ hơn.
+            transform.rotation = Quaternion.LookRotation(-knockbackDir);
+        }
+
+        if (anim != null && !string.IsNullOrEmpty(animationTrigger))
+        {
+            anim.SetTrigger(animationTrigger);
+        }
+
+        // Dùng Move trên NavMeshAgent để knockback mượt mà mà không bị Rigidbody + Agent giành transform.
+        float currentForce = force;
+        float damp = Mathf.Max(0.01f, friction);
 
         while (currentForce > 0.1f)
         {
-            // Gán vận tốc trực tiếp cho NavMeshAgent
-            agent.velocity = knockbackDir * currentForce;
+            agent.Move(knockbackDir * currentForce * Time.deltaTime);
 
             // Giảm dần lực theo thời gian (Deceleration)
-            currentForce = Mathf.Lerp(currentForce, 0, Time.deltaTime * friction);
+            currentForce = Mathf.Lerp(currentForce, 0, Time.deltaTime * damp);
 
             yield return null;
         }
 
         // Dừng hẳn trước khi trả lại quyền điều khiển cho AI
         agent.velocity = Vector3.zero;
-        yield return new WaitForSeconds(0.1f);
+
+        if (enemyBase != null && enemyBase.isDead)
+        {
+            knockbackRoutine = null;
+            yield break;
+        }
+
+        if (recoveryTime > 0f)
+        {
+            yield return new WaitForSeconds(recoveryTime);
+        }
 
         agent.isStopped = false;
+        agent.nextPosition = transform.position;
         currentState = AIState.Chase;
+        knockbackRoutine = null;
     }
 
     #region AI Logic States (Giữ nguyên các hàm cũ của bạn nhưng tối ưu hóa một chút)
