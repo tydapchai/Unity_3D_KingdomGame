@@ -126,6 +126,11 @@ namespace StarterAssets
         public bool canMove;
         [Range(0f, 1f)]
         public float directMoveBlend = 0f;
+        [Min(0f)] public float externalForceDeceleration = 20f;
+
+        private bool _combatLocked;
+        private float _hitLockTimer;
+        private Vector3 _externalVelocity;
 
         private void Awake()
         {
@@ -154,15 +159,89 @@ namespace StarterAssets
             // reset our timeouts on start
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
+            RefreshMovementState();
         }
 
         private void Update()
         {
             _hasAnimator = TryGetComponent(out _animator);
 
+            UpdateMovementLocks();
             JumpAndGravity();
             GroundedCheck();
             Move();
+        }
+
+        public void SetCombatLock(bool locked)
+        {
+            _combatLocked = locked;
+
+            if (locked)
+            {
+                _input.MoveInput(Vector2.zero);
+                _input.SprintInput(false);
+                _input.JumpInput(false);
+            }
+
+            RefreshMovementState();
+        }
+
+        public void ApplyExternalKnockback(Vector3 direction, float force, float duration)
+        {
+            if (direction.sqrMagnitude <= Mathf.Epsilon)
+            {
+                direction = -transform.forward;
+            }
+
+            direction.y = 0f;
+            direction.Normalize();
+
+            _externalVelocity = direction * force;
+            _hitLockTimer = Mathf.Max(_hitLockTimer, duration);
+
+            _input.MoveInput(Vector2.zero);
+            _input.SprintInput(false);
+            _input.JumpInput(false);
+
+            RefreshMovementState();
+        }
+
+        public void ClearExternalVelocity()
+        {
+            _externalVelocity = Vector3.zero;
+            _hitLockTimer = 0f;
+            RefreshMovementState();
+        }
+
+        private void UpdateMovementLocks()
+        {
+            if (_hitLockTimer > 0f)
+            {
+                _hitLockTimer -= Time.deltaTime;
+                if (_hitLockTimer < 0f)
+                {
+                    _hitLockTimer = 0f;
+                }
+            }
+
+            if (_externalVelocity.sqrMagnitude > 0.0001f)
+            {
+                _externalVelocity = Vector3.MoveTowards(
+                    _externalVelocity,
+                    Vector3.zero,
+                    externalForceDeceleration * Time.deltaTime);
+            }
+            else
+            {
+                _externalVelocity = Vector3.zero;
+            }
+
+            RefreshMovementState();
+        }
+
+        private void RefreshMovementState()
+        {
+            canMove = !_combatLocked && _hitLockTimer <= 0f;
         }
 
         private void LateUpdate()
@@ -224,13 +303,14 @@ namespace StarterAssets
 
             // note: Vector2's == operator uses approximation so is not floating point error prone, and is cheaper than magnitude
             // if there is no input, set the target speed to 0
-            if (_input.move == Vector2.zero) targetSpeed = 0.0f;
+            if (!canMove || _input.move == Vector2.zero) targetSpeed = 0.0f;
 
             // a reference to the players current horizontal velocity
             float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
 
             float speedOffset = 0.1f;
             float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
+            if (!canMove) inputMagnitude = 0f;
 
             // accelerate or decelerate to target speed
             if (currentHorizontalSpeed < targetSpeed - speedOffset ||
@@ -272,12 +352,14 @@ namespace StarterAssets
             Vector3 targetDirection = Quaternion.Euler(0.0f, _targetRotation, 0.0f) * Vector3.forward;
             Vector3 directMovement = transform.forward;
             targetDirection = Vector3.Lerp(targetDirection, directMovement, directMoveBlend);
-            // move the player
+
+            Vector3 horizontalMotion = _externalVelocity;
             if (canMove)
             {
-                _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) +
-                             new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
+                horizontalMotion += targetDirection.normalized * _speed;
             }
+
+            _controller.Move((horizontalMotion + new Vector3(0.0f, _verticalVelocity, 0.0f)) * Time.deltaTime);
            
             // update animator if using character
             if (_hasAnimator)

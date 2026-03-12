@@ -30,11 +30,19 @@ public class EnemyAI : MonoBehaviour
     public float attackCooldown = 2f;
     private float lastAttackTime;
     private bool isAttacking = false;
+    public Transform attackPoint;
+    public float attackHitRadius = 1.2f;
+    public float playerDamage = 15f;
+    public float playerKnockbackForce = 6f;
+    public float playerKnockbackDuration = 0.25f;
+    public float attackHitDelay = 0.55f;
+    public float attackAnimationDuration = 1.5f;
 
     [Tooltip("Số đòn đánh chịu được trước khi bị khựng (Stagger)")]
     public int maxPoise = 3;
     private int currentPoise;
     public float staggerDuration = 0.5f; // Thời gian khựng
+    private bool hasHitThisSwing;
 
     private Vector3 patrolDestination;
     private float idleTimer;
@@ -49,6 +57,9 @@ public class EnemyAI : MonoBehaviour
 
         if (playerTarget == null)
             playerTarget = GameObject.FindGameObjectWithTag("Player").transform;
+
+        if (attackPoint == null)
+            attackPoint = transform;
 
         agent.speed = chaseSpeed;
         agent.acceleration = 8f;
@@ -96,6 +107,11 @@ public class EnemyAI : MonoBehaviour
     // --- CƠ CHẾ KNOCKBACK & STAGGER CHUẨN SOULS ---
     public void TakeHit(Vector3 attackerPos, float knockbackForce)
     {
+        if ((enemyBase != null && enemyBase.isDead) || currentState == AIState.Staggered)
+        {
+            return;
+        }
+
         currentPoise--;
 
         if (currentPoise <= 0)
@@ -195,9 +211,43 @@ public class EnemyAI : MonoBehaviour
     System.Collections.IEnumerator PlayAttackAnimation()
     {
         isAttacking = true;
+        hasHitThisSwing = false;
         anim.SetTrigger("Attack");
-        yield return new WaitForSeconds(1.5f); // Khớp với clip đánh
+
+        yield return new WaitForSeconds(attackHitDelay);
+        if (currentState != AIState.Staggered && (enemyBase == null || !enemyBase.isDead))
+        {
+            DealDamageToPlayer();
+        }
+
+        yield return new WaitForSeconds(Mathf.Max(0f, attackAnimationDuration - attackHitDelay));
         isAttacking = false;
+    }
+
+    public void DealDamageToPlayer()
+    {
+        if (hasHitThisSwing)
+        {
+            return;
+        }
+
+        Vector3 hitOrigin = attackPoint != null
+            ? attackPoint.position
+            : transform.position + transform.forward * Mathf.Max(attackRange * 0.6f, 0.8f);
+
+        Collider[] hitPlayers = Physics.OverlapSphere(hitOrigin, attackHitRadius);
+        foreach (Collider hitPlayer in hitPlayers)
+        {
+            PlayerHitReceiver receiver = hitPlayer.GetComponentInParent<PlayerHitReceiver>();
+            if (receiver == null || receiver.isDead)
+            {
+                continue;
+            }
+
+            receiver.TakeHit(transform.position, playerDamage, playerKnockbackForce, playerKnockbackDuration);
+            hasHitThisSwing = true;
+            break;
+        }
     }
 
     void SearchNewPatrolPoint()
@@ -208,4 +258,13 @@ public class EnemyAI : MonoBehaviour
             agent.SetDestination(hit.position);
     }
     #endregion
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Vector3 hitOrigin = attackPoint != null
+            ? attackPoint.position
+            : transform.position + transform.forward * Mathf.Max(attackRange * 0.6f, 0.8f);
+        Gizmos.DrawWireSphere(hitOrigin, attackHitRadius);
+    }
 }

@@ -3757,6 +3757,7 @@ GameObject:
   - component: {fileID: 913808720528499}
   - component: {fileID: 5702065906356218872}
   - component: {fileID: 4312332204841233886}
+  - component: {fileID: 6027441456310063513}
   - component: {fileID: 344731887555160717}
   m_Layer: 6
   m_Name: PlayerController (1)
@@ -3877,6 +3878,7 @@ MonoBehaviour:
   LockCameraPosition: 0
   canMove: 1
   directMoveBlend: 0.5
+  externalForceDeceleration: 20
 --- !u!114 &6771095511863997053
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4045,6 +4047,27 @@ MonoBehaviour:
   minPitch: 0.9
   maxPitch: 1.1
   debug: 1
+--- !u!114 &6027441456310063513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4765933502095954815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3c2f4c85a444e8fa4d54d99bb870001, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 100
+  currentHealth: 0
+  isDead: 0
+  anim: {fileID: 9150662424260592053}
+  thirdPersonController: {fileID: 475208221512377043}
+  playerControl: {fileID: 4312332204841233886}
+  hitInvulnerability: 0.2
+  hitTriggerName: Hit
+  debug: 0
 --- !u!82 &344731887555160717
 AudioSource:
   m_ObjectHideFlags: 0

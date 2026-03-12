@@ -92,13 +92,13 @@ public class PlayerControl : MonoBehaviour
 
     public void Attack(int attackState)
     {
-        if (isAttacking)
+        if (isAttacking || thirdPersonController == null || !thirdPersonController.canMove)
         {
             return;
         }
 
-        thirdPersonController.canMove = false;
-        TargetDetectionControl.instance.canChangeTarget = false;
+        thirdPersonController.SetCombatLock(true);
+        SetTargetChange(false);
         RandomAttackAnim(attackState);
 
     }
@@ -135,8 +135,8 @@ public class PlayerControl : MonoBehaviour
                 }
                 else
                 {
-                    thirdPersonController.canMove = true;
-                    TargetDetectionControl.instance.canChangeTarget = true;
+                    thirdPersonController.SetCombatLock(false);
+                    SetTargetChange(true);
                 }
                 break;
 
@@ -148,8 +148,8 @@ public class PlayerControl : MonoBehaviour
                 }
                 else
                 {
-                    thirdPersonController.canMove = true;
-                    TargetDetectionControl.instance.canChangeTarget = true;
+                    thirdPersonController.SetCombatLock(false);
+                    SetTargetChange(true);
                 }
                 break;
 
@@ -161,8 +161,8 @@ public class PlayerControl : MonoBehaviour
                 }
                 else
                 {
-                    thirdPersonController.canMove = true;
-                    TargetDetectionControl.instance.canChangeTarget = true;
+                    thirdPersonController.SetCombatLock(false);
+                    SetTargetChange(true);
                 }
                 break;
         }
@@ -187,8 +187,8 @@ public class PlayerControl : MonoBehaviour
                 }
                 else
                 {
-                    TargetDetectionControl.instance.canChangeTarget = true;
-                    thirdPersonController.canMove = true;
+                    SetTargetChange(true);
+                    thirdPersonController.SetCombatLock(false);
                 }
                 break;
 
@@ -201,8 +201,8 @@ public class PlayerControl : MonoBehaviour
                 }
                 else
                 {
-                    thirdPersonController.canMove = true;
-                    TargetDetectionControl.instance.canChangeTarget = true;
+                    thirdPersonController.SetCombatLock(false);
+                    SetTargetChange(true);
                 }
                 break;
         }
@@ -210,14 +210,13 @@ public class PlayerControl : MonoBehaviour
 
     public void ResetAttack() // Animation Event ---- for Reset Attack
     {
-        anim.SetBool("punch", false);
-        anim.SetBool("kick", false);
-        anim.SetBool("mmakick", false);
-        anim.SetBool("heavyAttack1", false);
-        anim.SetBool("heavyAttack2", false);
-        thirdPersonController.canMove = true;
-        TargetDetectionControl.instance.canChangeTarget = true;
-        isAttacking = false;
+        ResetAttackState();
+    }
+
+    public void InterruptAttack()
+    {
+        transform.DOKill(false);
+        ResetAttackState();
     }
 
     public void PerformAttack() // Animation Event ---- for Attacking Targets
@@ -228,6 +227,7 @@ public class PlayerControl : MonoBehaviour
         foreach (Collider enemy in hitEnemies)
         {
             EnemyBase enemyBase = enemy.GetComponent<EnemyBase>();
+            EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
             Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
 
             // 1. Xử lý Trừ máu và Sinh hiệu ứng máu (Chỉ chạy khi quái có script EnemyBase)
@@ -236,6 +236,11 @@ public class PlayerControl : MonoBehaviour
                 enemyBase.TakeDamage(25f); // Trừ máu
                 enemyBase.SpawnHitVfx(enemyBase.transform.position); // Hiện VFX văng máu
                 hasHitSomeone = true; // Ghi nhận là đã chém trúng thịt
+            }
+
+            if (enemyAI != null)
+            {
+                enemyAI.TakeHit(transform.position, knockbackForce);
             }
 
             // 2. Xử lý Lực đẩy lùi - Knockback (Chỉ chạy khi quái có Rigidbody)
@@ -299,6 +304,34 @@ public class PlayerControl : MonoBehaviour
 
 
     #region MoveTowards, Target Offset and FaceThis
+
+    private void SetTargetChange(bool canChange)
+    {
+        if (TargetDetectionControl.instance != null)
+        {
+            TargetDetectionControl.instance.canChangeTarget = canChange;
+        }
+    }
+
+    private void ResetAttackState()
+    {
+        ResetAttackAnimationFlags();
+        if (thirdPersonController != null)
+        {
+            thirdPersonController.SetCombatLock(false);
+        }
+        SetTargetChange(true);
+        isAttacking = false;
+    }
+
+    private void ResetAttackAnimationFlags()
+    {
+        anim.SetBool("punch", false);
+        anim.SetBool("kick", false);
+        anim.SetBool("mmakick", false);
+        anim.SetBool("heavyAttack1", false);
+        anim.SetBool("heavyAttack2", false);
+    }
 
     public void MoveTowardsTarget(Vector3 target_, float deltaDistance, string animationName_)
     {
