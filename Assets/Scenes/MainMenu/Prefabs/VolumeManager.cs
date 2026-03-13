@@ -22,15 +22,13 @@ public class VolumeManager : MonoBehaviour
 
     public void SetVolume(float sliderValue)
     {
-        if (sliderValue <= 0.0001f) 
-        {
-            audioMixer.SetFloat("Audio", -80f);
-        }
-        else 
-        {
-            float dbVolume = Mathf.Log10(sliderValue) * 20;
-            audioMixer.SetFloat("Audio", dbVolume);
-        }
+        float volume = Mathf.Clamp(sliderValue, 0.0001f, 1f);
+
+        float dbVolume = Mathf.Log10(volume) * 20;
+
+        bool result = audioMixer.SetFloat("Audio", dbVolume);
+
+        if (!result) Debug.LogError("Không tìm thấy tham số mang tên 'Audio' trong Mixer!");
 
         PlayerPrefs.SetFloat(VOLUME_PREF_KEY, sliderValue);
     }
