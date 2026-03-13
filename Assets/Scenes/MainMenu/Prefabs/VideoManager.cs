@@ -1,11 +1,14 @@
 using UnityEngine;
 using UnityEngine.Video;
+using UnityEngine.EventSystems;
 
 public class VideoManager : MonoBehaviour
 {
     [Header("Components")]
     [SerializeField] private VideoPlayer _videoPlayer;
     [SerializeField] private GameObject _endGameCanvas;
+
+    private bool isPaused = false;
 
     void Start()
     {
@@ -28,11 +31,32 @@ public class VideoManager : MonoBehaviour
 
     void Update()
     {
-        if (Input.anyKeyDown && _videoPlayer.isPlaying)
+        if (EventSystem.current.IsPointerOverGameObject())
+            return;
+
+        if (Input.anyKeyDown)
         {
-            _videoPlayer.Stop();
-            OnVideoEnd(_videoPlayer);
+            if (!isPaused && _videoPlayer.isPlaying)
+            {
+                _videoPlayer.Pause();
+                OnVideoEnd(_videoPlayer);
+                isPaused = true;
+            }
+            else if (isPaused)
+            {
+                ContinueVideo();
+            }
         }
+    }
+
+    void ContinueVideo()
+    {
+
+        if (_endGameCanvas != null)
+            _endGameCanvas.SetActive(false);
+
+        _videoPlayer.Play();
+        isPaused = false;
     }
 
     void OnDestroy()
