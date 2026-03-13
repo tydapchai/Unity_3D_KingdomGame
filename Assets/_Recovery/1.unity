@@ -328,25 +328,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -8414035388980806860, guid: e070e1f3acbb6604abadf8f5da9c887f, type: 3}
---- !u!1 &12875841 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8768048779829703243, guid: f8e6491a46ce7334089af7142aeed916, type: 3}
-  m_PrefabInstance: {fileID: 1650230945}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &12875848
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 12875841}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fa26d26d3ca1fae4e88c213742f2e2a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Unity.FantasyKingdom.Item
-  item: {fileID: 11400000, guid: bc6a2bbde58765345a64ac4a064df689, type: 2}
-  amount: 1
 --- !u!1 &13129900
 GameObject:
   m_ObjectHideFlags: 0
@@ -405,6 +386,10 @@ MonoBehaviour:
   container: {fileID: 1042936242}
   dragIcon: {fileID: 958065433}
   pickupRange: 3
+  dropForwardDistance: 1.2
+  dropHeightOffset: 0.75
+  dropClearanceBuffer: 0.35
+  droppedItemPickupGraceDuration: 0.2
   highlightMaterial: {fileID: 2100000, guid: cdb8a6a9ce103ec4c80fcb841bac60c6, type: 2}
   inventoryToggleKey: 98
   inventoryCursorToggleKey: 27
@@ -31756,10 +31741,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8768048779829703243, guid: f8e6491a46ce7334089af7142aeed916, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 12875848}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f8e6491a46ce7334089af7142aeed916, type: 3}
 --- !u!1001 &1655972705
 PrefabInstance:
