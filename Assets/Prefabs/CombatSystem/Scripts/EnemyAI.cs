@@ -13,6 +13,7 @@ public class EnemyAI : MonoBehaviour
     public NavMeshAgent agent;
     public Animator anim;
     private EnemyBase enemyBase;
+    private PlayerHealth playerHealthScript; // Dùng để kiểm tra Player còn sống không
 
     [Header("Movement Settings")]
     public float walkSpeed = 2.0f;
@@ -34,14 +35,20 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("Số đòn đánh chịu được trước khi bị khựng (Stagger)")]
     public int maxPoise = 3;
     private int currentPoise;
-    public float staggerDuration = 0.5f; // Thời gian khựng
+    public float staggerDuration = 0.5f;
+
     [Header("Hit Reaction")]
-    [Tooltip("Mỗi hit thường sẽ lùi nhẹ theo tỉ lệ này so với knockbackForce từ Player.")]
     [Range(0f, 1f)] public float lightHitKnockbackMultiplier = 0.35f;
     public float lightHitRecoveryTime = 0.08f;
     public float lightHitFriction = 18f;
     public float staggerKnockbackMultiplier = 1.5f;
     public float staggerFriction = 10f;
+
+    [Header("Enemy Attack Settings")]
+    public float attackDamage = 15f;
+    public Transform attackPos;
+    public float attackRadius = 1.2f;
+    public LayerMask playerLayer;
 
     private Vector3 patrolDestination;
     private float idleTimer;
@@ -59,6 +66,10 @@ public class EnemyAI : MonoBehaviour
         if (playerTarget == null)
             playerTarget = GameObject.FindGameObjectWithTag("Player").transform;
 
+        // Tìm script máu trên người Player để theo dõi
+        if (playerTarget != null)
+            playerHealthScript = playerTarget.GetComponent<PlayerHealth>();
+
         agent.speed = chaseSpeed;
         agent.acceleration = 8f;
         agent.stoppingDistance = attackRange - 0.5f;
@@ -68,13 +79,24 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
+        // 1. Kiểm tra nếu quái chết
         if (enemyBase != null && enemyBase.isDead)
         {
             agent.isStopped = true;
             return;
         }
 
-        // Nếu đang bị khựng thì không làm gì cả
+        // 2. KIỂM TRA NẾU PLAYER CHẾT -> NGỪNG AI
+        if (playerHealthScript != null && playerHealthScript.isDead)
+        {
+            agent.isStopped = true;
+            isAttacking = false;
+            currentState = AIState.Idle;
+            UpdateAnimation(0); // Cho quái về dáng đứng im
+            return; // Thoát luôn Update, không làm gì thêm
+        }
+
+        // 3. Nếu đang bị khựng thì không làm gì cả
         if (currentState == AIState.Staggered) return;
 
         float distanceToPlayer = Vector3.Distance(transform.position, playerTarget.position);
@@ -102,51 +124,33 @@ public class EnemyAI : MonoBehaviour
         anim.SetFloat("Speed", _currentAnimSpeed);
     }
 
-    // --- CƠ CHẾ KNOCKBACK & STAGGER CHUẨN SOULS ---
     public void TakeHit(Vector3 attackerPos, float knockbackForce)
     {
-        if (enemyBase != null && enemyBase.isDead)
-        {
-            return;
-        }
+        if (enemyBase != null && enemyBase.isDead) return;
+        if (currentState == AIState.Staggered) return;
 
-        if (currentState == AIState.Staggered)
-        {
-            return;
-        }
-
+        isAttacking = false;
         currentPoise--;
 
         if (currentPoise <= 0)
         {
-            // Bị phá thế (Stagger)
-            currentPoise = maxPoise; // Reset lại poise
+            currentPoise = maxPoise;
             StartKnockback(attackerPos, knockbackForce * staggerKnockbackMultiplier, staggerFriction, staggerDuration, "Stagger", true);
         }
         else
         {
-            // Hit thường vẫn lùi nhẹ để cảm giác trúng đòn rõ ràng hơn.
             if (lightHitKnockbackMultiplier <= 0f)
             {
-                if (anim != null)
-                {
-                    anim.SetTrigger("GetHit");
-                }
-
+                if (anim != null) anim.SetTrigger("GetHit");
                 return;
             }
-
             StartKnockback(attackerPos, knockbackForce * lightHitKnockbackMultiplier, lightHitFriction, lightHitRecoveryTime, "GetHit", false);
         }
     }
 
     private void StartKnockback(Vector3 attackerPos, float force, float friction, float recoveryTime, string animationTrigger, bool faceAttacker)
     {
-        if (knockbackRoutine != null)
-        {
-            StopCoroutine(knockbackRoutine);
-        }
-
+        if (knockbackRoutine != null) StopCoroutine(knockbackRoutine);
         knockbackRoutine = StartCoroutine(KnockbackRoutine(attackerPos, force, friction, recoveryTime, animationTrigger, faceAttacker));
     }
 
@@ -157,55 +161,28 @@ public class EnemyAI : MonoBehaviour
         agent.isStopped = true;
         agent.ResetPath();
 
-        // Tính hướng đẩy lùi (từ Player hướng về Enemy)
         Vector3 knockbackDir = transform.position - attackerPos;
         knockbackDir.y = 0;
-
-        if (knockbackDir.sqrMagnitude <= 0.001f)
-        {
-            knockbackDir = -transform.forward;
-        }
-
+        if (knockbackDir.sqrMagnitude <= 0.001f) knockbackDir = -transform.forward;
         knockbackDir.Normalize();
 
-        if (faceAttacker)
-        {
-            // Quay mặt về phía người chơi ở cú stagger mạnh để hit reaction rõ hơn.
-            transform.rotation = Quaternion.LookRotation(-knockbackDir);
-        }
+        if (faceAttacker) transform.rotation = Quaternion.LookRotation(-knockbackDir);
 
-        if (anim != null && !string.IsNullOrEmpty(animationTrigger))
-        {
-            anim.SetTrigger(animationTrigger);
-        }
+        if (anim != null && !string.IsNullOrEmpty(animationTrigger)) anim.SetTrigger(animationTrigger);
 
-        // Dùng Move trên NavMeshAgent để knockback mượt mà mà không bị Rigidbody + Agent giành transform.
         float currentForce = force;
         float damp = Mathf.Max(0.01f, friction);
 
         while (currentForce > 0.1f)
         {
             agent.Move(knockbackDir * currentForce * Time.deltaTime);
-
-            // Giảm dần lực theo thời gian (Deceleration)
             currentForce = Mathf.Lerp(currentForce, 0, Time.deltaTime * damp);
-
             yield return null;
         }
 
-        // Dừng hẳn trước khi trả lại quyền điều khiển cho AI
         agent.velocity = Vector3.zero;
-
-        if (enemyBase != null && enemyBase.isDead)
-        {
-            knockbackRoutine = null;
-            yield break;
-        }
-
-        if (recoveryTime > 0f)
-        {
-            yield return new WaitForSeconds(recoveryTime);
-        }
+        if (enemyBase != null && enemyBase.isDead) { knockbackRoutine = null; yield break; }
+        if (recoveryTime > 0f) yield return new WaitForSeconds(recoveryTime);
 
         agent.isStopped = false;
         agent.nextPosition = transform.position;
@@ -213,7 +190,7 @@ public class EnemyAI : MonoBehaviour
         knockbackRoutine = null;
     }
 
-    #region AI Logic States (Giữ nguyên các hàm cũ của bạn nhưng tối ưu hóa một chút)
+    #region AI Logic States
     void IdleState(float distanceToPlayer)
     {
         agent.isStopped = true;
@@ -259,7 +236,7 @@ public class EnemyAI : MonoBehaviour
     {
         isAttacking = true;
         anim.SetTrigger("Attack");
-        yield return new WaitForSeconds(1.5f); // Khớp với clip đánh
+        yield return new WaitForSeconds(1.5f);
         isAttacking = false;
     }
 
@@ -271,4 +248,29 @@ public class EnemyAI : MonoBehaviour
             agent.SetDestination(hit.position);
     }
     #endregion
+
+    public void PerformEnemyAttack()
+    {
+        if (!isAttacking || currentState == AIState.Staggered) return;
+        if (attackPos == null) return;
+
+        Collider[] hitPlayers = Physics.OverlapSphere(attackPos.position, attackRadius, playerLayer);
+        foreach (Collider playerCol in hitPlayers)
+        {
+            PlayerHealth playerStats = playerCol.GetComponent<PlayerHealth>();
+            if (playerStats != null && !playerStats.isDead)
+            {
+                playerStats.TakeDamage(attackDamage);
+            }
+        }
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (attackPos != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(attackPos.position, attackRadius);
+        }
+    }
 }

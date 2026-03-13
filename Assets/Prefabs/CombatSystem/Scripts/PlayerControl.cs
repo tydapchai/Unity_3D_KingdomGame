@@ -224,36 +224,25 @@ public class PlayerControl : MonoBehaviour
     {
         Collider[] hitEnemies = Physics.OverlapSphere(attackPos.position, attackRange, enemyLayer);
         bool hasHitSomeone = false;
-        HashSet<EnemyBase> processedEnemies = new HashSet<EnemyBase>();
 
         foreach (Collider enemy in hitEnemies)
         {
-            EnemyBase enemyBase = enemy.GetComponentInParent<EnemyBase>();
-            if (enemyBase == null || enemyBase.isDead || !processedEnemies.Add(enemyBase))
-            {
-                continue;
-            }
-
-            EnemyAI enemyAI = enemyBase.GetComponent<EnemyAI>();
-            Rigidbody enemyRb = enemy.attachedRigidbody != null
-                ? enemy.attachedRigidbody
-                : enemyBase.GetComponent<Rigidbody>();
+            EnemyBase enemyBase = enemy.GetComponent<EnemyBase>();
+            Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
 
             // 1. Xử lý Trừ máu và Sinh hiệu ứng máu (Chỉ chạy khi quái có script EnemyBase)
-            enemyBase.TakeDamage(25f, enemyAI == null); // Trừ máu
-            enemyBase.SpawnHitVfx(enemyBase.transform.position); // Hiện VFX văng máu
-            hasHitSomeone = true; // Ghi nhận là đã chém trúng thịt
-
-            // 2. Enemy có AI dùng pipeline stagger riêng để không bị NavMeshAgent + Rigidbody giành transform
-            if (enemyAI != null)
+            if (enemyBase != null)
             {
-                enemyAI.TakeHit(transform.position, knockbackForce);
+                enemyBase.TakeDamage(25f); // Trừ máu
+                enemyBase.SpawnHitVfx(enemyBase.transform.position); // Hiện VFX văng máu
+                hasHitSomeone = true; // Ghi nhận là đã chém trúng thịt
             }
-            // 3. Fallback cho target dummy không có AI: giữ AddForce như cũ
-            else if (enemyRb != null)
+
+            // 2. Xử lý Lực đẩy lùi - Knockback (Chỉ chạy khi quái có Rigidbody)
+            if (enemyRb != null)
             {
                 // Tính toán hướng đẩy lùi
-                Vector3 knockbackDirection = enemyBase.transform.position - transform.position;
+                Vector3 knockbackDirection = enemy.transform.position - transform.position;
                 knockbackDirection.y = airknockbackForce; // Giữ lực đẩy ngang/chếch lên
 
                 // Tác dụng lực đẩy lên quái
