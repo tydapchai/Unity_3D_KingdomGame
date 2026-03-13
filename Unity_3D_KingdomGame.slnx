@@ -1,9 +1,13 @@
 ﻿<Solution>
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="MyGameDevTools.SceneLoading.csproj" />
   <Project Path="ToonyColorsPro.Demo.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="MyGameDevTools.SceneLoading.Tests.csproj" />
   <Project Path="CFXR.WelcomeScreen.csproj" />
+  <Project Path="Sample.LoadingScene.csproj" />
   <Project Path="CFXRRuntime.csproj" />
+  <Project Path="Sample.LoadingScene.Editor.csproj" />
   <Project Path="CFXREditor.csproj" />
   <Project Path="CFXRDemo.csproj" />
   <Project Path="KinoBloom.Runtime.csproj" />
