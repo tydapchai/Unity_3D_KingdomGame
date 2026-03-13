@@ -3758,6 +3758,8 @@ GameObject:
   - component: {fileID: 5702065906356218872}
   - component: {fileID: 4312332204841233886}
   - component: {fileID: 344731887555160717}
+  - component: {fileID: 6202415928611062407}
+  - component: {fileID: 6988891885509102194}
   m_Layer: 6
   m_Name: PlayerController (1)
   m_TagString: Player
@@ -3826,7 +3828,7 @@ CharacterController:
   serializedVersion: 3
   m_Height: 1.8
   m_Radius: 0.28
-  m_SlopeLimit: 45
+  m_SlopeLimit: 90
   m_StepOffset: 0.25
   m_SkinWidth: 0.02
   m_MinMoveDistance: 0
@@ -4142,6 +4144,43 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &6202415928611062407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4765933502095954815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 761a0e1e13fda014e9d1e7c1b4060b8e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  maxHealth: 35
+  currentHealth: 0
+  isDead: 0
+  anim: {fileID: 0}
+  statBar: {fileID: 0}
+  statBarFade: {fileID: 0}
+  fadeSpeed: 0.5
+  currentValueText: {fileID: 0}
+  maxValueText: {fileID: 0}
+--- !u!114 &6988891885509102194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4765933502095954815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfe1a85a86a1fe543964afc33fb4fb6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCombat
+  anim: {fileID: 9150662424260592053}
+  swordModel: {fileID: 2729094727854979171}
+  isEquipped: 0
+  transitionSpeed: 5
 --- !u!1 &4912711080961516313
 GameObject:
   m_ObjectHideFlags: 0
