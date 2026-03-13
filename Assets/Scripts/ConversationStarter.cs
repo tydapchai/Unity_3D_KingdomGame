@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
+using PlayerCombatController = global::PlayerControl;
 
 namespace Unity.FantasyKingdom
 {
@@ -13,9 +14,12 @@ namespace Unity.FantasyKingdom
         [SerializeField] private TMP_Text interactionPromptText;
         [SerializeField] private string interactionPromptMessage = "Press E to talk";
         [SerializeField] private Vector2 interactionPromptPosition = new(0f, 120f);
+        [SerializeField] private float interactionDistance = 3f;
 
         private NpcPatrol npcPatrol;
         private NavMeshAgent navMeshAgent;
+        private Transform playerTransform;
+        private Collider interactionCollider;
         private bool conversationOwnedByThisStarter;
         private bool createdRuntimePrompt;
 
@@ -23,6 +27,7 @@ namespace Unity.FantasyKingdom
         {
             npcPatrol = GetComponent<NpcPatrol>();
             navMeshAgent = GetComponent<NavMeshAgent>();
+            interactionCollider = GetComponent<Collider>();
             EnsureInteractionPrompt();
             RefreshInteractionPrompt();
             SetInteractionPromptVisible(false);
@@ -151,43 +156,11 @@ namespace Unity.FantasyKingdom
             return null;
         }
 
-        private void OnTriggerEnter(Collider other)
+        private void Update()
         {
-            if (!other.CompareTag("Player"))
-            {
-                return;
-            }
-
             RefreshInteractionPrompt();
 
-            if (!IsConversationAvailable())
-            {
-                return;
-            }
-
-            SetInteractionPromptVisible(true);
-        }
-
-        private void OnTriggerExit(Collider other)
-        {
-            if (!other.CompareTag("Player"))
-            {
-                return;
-            }
-
-            SetInteractionPromptVisible(false);
-        }
-
-        private void OnTriggerStay(Collider other)
-        {
-            if (!other.CompareTag("Player"))
-            {
-                return;
-            }
-
-            RefreshInteractionPrompt();
-
-            bool canStartConversation = IsConversationAvailable();
+            bool canStartConversation = CanInteractWithPlayer();
             SetInteractionPromptVisible(canStartConversation);
 
             if (!canStartConversation)
@@ -201,6 +174,59 @@ namespace Unity.FantasyKingdom
                 SetInteractionPromptVisible(false);
                 ConversationManager.Instance.StartConversation(myConversation);
             }
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            if (!other.CompareTag("Player"))
+            {
+                return;
+            }
+
+            PlayerCombatController playerController = other.GetComponentInParent<PlayerCombatController>();
+            if (playerController == null)
+            {
+                return;
+            }
+
+            playerTransform = playerController.transform;
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (!other.CompareTag("Player"))
+            {
+                return;
+            }
+
+            PlayerCombatController playerController = other.GetComponentInParent<PlayerCombatController>();
+            if (playerController == null)
+            {
+                return;
+            }
+
+            if (playerTransform == playerController.transform)
+            {
+                playerTransform = null;
+            }
+
+            SetInteractionPromptVisible(false);
+        }
+
+        private void OnTriggerStay(Collider other)
+        {
+            if (!other.CompareTag("Player"))
+            {
+                return;
+            }
+
+            PlayerCombatController playerController = other.GetComponentInParent<PlayerCombatController>();
+            if (playerController == null)
+            {
+                return;
+            }
+
+            playerTransform = playerController.transform;
         }
 
         private void HandleConversationStarted()
@@ -223,7 +249,7 @@ namespace Unity.FantasyKingdom
 
             ResumeNpcMovement();
             conversationOwnedByThisStarter = false;
-            SetInteractionPromptVisible(true);
+            SetInteractionPromptVisible(CanInteractWithPlayer());
         }
 
         private bool IsConversationAvailable()
@@ -231,6 +257,50 @@ namespace Unity.FantasyKingdom
             return myConversation != null
                 && ConversationManager.Instance != null
                 && !ConversationManager.Instance.IsConversationActive;
+        }
+
+        private bool CanInteractWithPlayer()
+        {
+            if (!IsConversationAvailable())
+            {
+                return false;
+            }
+
+            Transform player = ResolvePlayerTransform();
+            if (player == null)
+            {
+                return false;
+            }
+
+            Vector3 playerPosition = player.position;
+            Vector3 npcPosition = transform.position;
+
+            if (interactionCollider != null)
+            {
+                npcPosition = interactionCollider.ClosestPoint(playerPosition);
+            }
+
+            playerPosition.y = 0f;
+            npcPosition.y = 0f;
+            float distance = Vector3.Distance(npcPosition, playerPosition);
+            return distance <= interactionDistance;
+        }
+
+        private Transform ResolvePlayerTransform()
+        {
+            if (playerTransform != null && playerTransform.GetComponentInParent<PlayerCombatController>() != null)
+            {
+                return playerTransform;
+            }
+
+            PlayerCombatController playerController = FindFirstObjectByType<PlayerCombatController>(FindObjectsInactive.Exclude);
+            if (playerController == null)
+            {
+                return null;
+            }
+
+            playerTransform = playerController.transform;
+            return playerTransform;
         }
 
         private void RefreshInteractionPrompt()
