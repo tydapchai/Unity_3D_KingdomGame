@@ -66,6 +66,7 @@ namespace Unity.FantasyKingdom
         [SerializeField] private string handAttachBoneName = "Wrist_R";
         [SerializeField] private string defaultHeldVisualName = "FREE GREAT SWORD 3 COLOR 2";
         [SerializeField] private bool hideDefaultHeldVisualWhenNoItem = true;
+        [SerializeField] private Vector3 axeEquippedRotation = new Vector3(-89.84f, -191.09f, 4.15f);
         private List<Slot> inventorySlots = new List<Slot>();
         private List<Slot> hotbarSlots = new List<Slot>();
         private List<Slot> allSlots = new List<Slot>();
@@ -1528,6 +1529,10 @@ namespace Unity.FantasyKingdom
             equippedHandItemInstance = Instantiate(handVisualPrefab, attachPoint, false);
             equippedHandItemInstance.name = $"{handVisualPrefab.name}_Equipped";
             ApplyEquippedHandPose(equippedHandItemInstance.transform);
+            if (itemToEquip == axeItem)
+            {
+                equippedHandItemInstance.transform.localRotation = Quaternion.Euler(axeEquippedRotation);
+            }
             PrepareHandVisualInstance(equippedHandItemInstance, itemToEquip.handItemPrefab == null);
         }
 
