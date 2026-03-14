@@ -40,7 +40,7 @@ namespace DevionGames
 
         private void FixedUpdate()
         {
-            this.m_Rigidbody.velocity = transform.forward * m_Speed; 
+            this.m_Rigidbody.linearVelocity = transform.forward * m_Speed; 
         }
 
     }

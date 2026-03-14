@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dc0c592ff489484d9b6ea2490a0049b, type: 3}
+  m_Name: TStep_Move
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.FantasyKingdom.TutorialStepDefinition
+  stepId: move
+  title: Movement
+  objectiveText: Move the character
+  subText: Use WASD to begin exploring.
+  completionText: Move Completed
+  highlightType: 1
+  customHighlightLabels: []
+  showWorldMarker: 0
+  target: {fileID: 0}
+  completionType: 1
+  customEventId: 
+  inputThreshold: 0.25
+  requiredDistance: 1.5
+  requiredDuration: 0.5
+  triggerRadius: 3
+  autoAdvance: 1
+  advanceDelay: 0.75

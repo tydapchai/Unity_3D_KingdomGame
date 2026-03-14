@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using StarterAssets;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Unity.FantasyKingdom
@@ -31,6 +32,10 @@ namespace Unity.FantasyKingdom
         private readonly List<Item> candidateItems = new List<Item>();
         private readonly List<Renderer> lookedAtRenderers = new List<Renderer>();
         private readonly List<Material[]> originalRendererMaterials = new List<Material[]>();
+        private readonly List<RaycastResult> uiRaycastResults = new List<RaycastResult>(16);
+        private EventSystem fallbackEventSystem;
+        private bool createdFallbackEventSystem;
+        private Camera cachedPickupCamera;
         private static readonly KeyCode[] HotbarKeyCodes =
         {
             KeyCode.Alpha1,
@@ -104,6 +109,11 @@ namespace Unity.FantasyKingdom
 
         private void Start()
         {
+            if (!OwnsPlayerInput())
+            {
+                return;
+            }
+
             SyncInventoryState();
             UpdateHotBarOpacity();
             RefreshEquippedHandItem(forceRefresh: true);
@@ -111,11 +121,21 @@ namespace Unity.FantasyKingdom
 
         private void OnDisable()
         {
+            if (!OwnsPlayerInput())
+            {
+                return;
+            }
+
             ReleaseGameplayLock();
         }
 
         void Update()
         {
+            if (!OwnsPlayerInput())
+            {
+                return;
+            }
+
             if (Input.GetKeyDown(inventoryToggleKey))
             {
                 ToggleInventory();
@@ -351,6 +371,31 @@ namespace Unity.FantasyKingdom
 
         private Slot GetHoveredSlot()
         {
+            if (EventSystem.current != null)
+            {
+                PointerEventData pointerData = new PointerEventData(EventSystem.current)
+                {
+                    position = Input.mousePosition
+                };
+
+                uiRaycastResults.Clear();
+                EventSystem.current.RaycastAll(pointerData, uiRaycastResults);
+                for (int i = 0; i < uiRaycastResults.Count; i++)
+                {
+                    GameObject hitObject = uiRaycastResults[i].gameObject;
+                    if (hitObject == null)
+                    {
+                        continue;
+                    }
+
+                    Slot slot = hitObject.GetComponentInParent<Slot>();
+                    if (slot != null && allSlots.Contains(slot))
+                    {
+                        return slot;
+                    }
+                }
+            }
+
             foreach (Slot s in allSlots)
             {
                 if (s.hovering)
@@ -433,6 +478,7 @@ namespace Unity.FantasyKingdom
             {
                 if (isActive)
                 {
+                    EnsureEventSystemForInventory();
                     EnsureInventoryCursorState();
                 }
 
@@ -446,6 +492,7 @@ namespace Unity.FantasyKingdom
             if (isActive)
             {
                 ClearLookedAtItemHighlight();
+                EnsureEventSystemForInventory();
             }
 
             ApplyStarterAssetsInputState(gameplayEnabled);
@@ -457,6 +504,7 @@ namespace Unity.FantasyKingdom
             }
             else
             {
+                RestoreEventSystemAfterInventory();
                 StopDrag();
             }
         }
@@ -544,6 +592,41 @@ namespace Unity.FantasyKingdom
             Cursor.visible = true;
         }
 
+        private void EnsureEventSystemForInventory()
+        {
+            if (EventSystem.current != null && EventSystem.current.gameObject.activeInHierarchy)
+            {
+                return;
+            }
+
+            if (createdFallbackEventSystem && fallbackEventSystem != null)
+            {
+                if (!fallbackEventSystem.gameObject.activeSelf)
+                {
+                    fallbackEventSystem.gameObject.SetActive(true);
+                }
+
+                return;
+            }
+
+            GameObject eventSystemObject = new GameObject("InventoryEventSystem");
+            fallbackEventSystem = eventSystemObject.AddComponent<EventSystem>();
+            eventSystemObject.AddComponent<StandaloneInputModule>();
+            createdFallbackEventSystem = true;
+        }
+
+        private void RestoreEventSystemAfterInventory()
+        {
+            if (!createdFallbackEventSystem || fallbackEventSystem == null)
+            {
+                return;
+            }
+
+            Destroy(fallbackEventSystem.gameObject);
+            fallbackEventSystem = null;
+            createdFallbackEventSystem = false;
+        }
+
         private void ReleaseGameplayLock()
         {
             if (!isInventoryInteractionActive && !IsInputBlocked &&
@@ -553,6 +636,7 @@ namespace Unity.FantasyKingdom
             }
 
             RestoreCameraBehaviours();
+            RestoreEventSystemAfterInventory();
             IsInputBlocked = false;
             isInventoryInteractionActive = false;
             ApplyStarterAssetsInputState(true);
@@ -573,32 +657,43 @@ namespace Unity.FantasyKingdom
 
         private void Pickup()
         {
-            if (lockedItem == null || !Input.GetKeyDown(KeyCode.E))
+            if (!Input.GetKeyDown(KeyCode.E))
             {
                 return;
             }
 
-            int pickedUpAmount = AddItem(lockedItem.item, lockedItem.amount);
+            Transform playerRoot = ResolvePlayerRoot();
+            Camera activeCamera = ResolvePickupCamera();
+            if (!TryResolvePickupTarget(activeCamera, playerRoot, out Item itemToPickup))
+            {
+                return;
+            }
+
+            int pickedUpAmount = AddItem(itemToPickup.item, itemToPickup.amount);
             if (pickedUpAmount <= 0)
             {
                 return;
             }
 
-            if (pickedUpAmount >= lockedItem.amount)
+            if (pickedUpAmount >= itemToPickup.amount)
             {
-                Destroy(lockedItem.gameObject);
-                lockedItem = null;
+                Destroy(itemToPickup.gameObject);
+                if (lockedItem == itemToPickup)
+                {
+                    lockedItem = null;
+                }
+
                 return;
             }
 
-            lockedItem.amount -= pickedUpAmount;
+            itemToPickup.amount -= pickedUpAmount;
         }
 
         private void DetectLookedAtItem()
         {
             ClearLookedAtItemHighlight();
 
-            Camera activeCamera = Camera.main;
+            Camera activeCamera = ResolvePickupCamera();
             if (isInventoryInteractionActive || activeCamera == null)
             {
                 return;
@@ -680,7 +775,7 @@ namespace Unity.FantasyKingdom
                 }
 
                 Item hitItem = hit.collider.GetComponentInParent<Item>();
-                if (hitItem == null)
+                if (!IsItemPickupable(hitItem))
                 {
                     if (hit.collider.isTrigger)
                     {
@@ -741,7 +836,7 @@ namespace Unity.FantasyKingdom
                 }
 
                 Item candidate = nearbyCollider.GetComponentInParent<Item>();
-                if (candidate == null ||
+                if (!IsItemPickupable(candidate) ||
                     candidateItems.Contains(candidate) ||
                     IsPickupTemporarilyBlocked(candidate) ||
                     !IsItemWithinPickupRange(candidate, playerRoot))
@@ -755,7 +850,8 @@ namespace Unity.FantasyKingdom
                     continue;
                 }
 
-                Vector3 viewportPoint = activeCamera.WorldToViewportPoint(bounds.center);
+                Vector3 targetPoint = GetPreferredTargetPoint(bounds, activeCamera);
+                Vector3 viewportPoint = activeCamera.WorldToViewportPoint(targetPoint);
                 if (viewportPoint.z <= 0f)
                 {
                     continue;
@@ -769,14 +865,14 @@ namespace Unity.FantasyKingdom
                     continue;
                 }
 
-                if (!HasLineOfSight(activeCamera, bounds.center, candidate, playerRoot))
+                if (!HasLineOfSight(activeCamera, targetPoint, candidate, playerRoot))
                 {
                     continue;
                 }
 
                 float distanceScore = playerRoot != null
-                    ? Vector3.Distance(playerRoot.position, candidate.transform.position)
-                    : Vector3.Distance(activeCamera.transform.position, candidate.transform.position);
+                    ? GetDistanceToItem(candidate, playerRoot.position)
+                    : GetDistanceToItem(candidate, activeCamera.transform.position);
                 float score = viewportOffset + distanceScore * 0.1f;
                 if (score < bestScore)
                 {
@@ -786,6 +882,107 @@ namespace Unity.FantasyKingdom
             }
 
             return item != null;
+        }
+
+        private Camera ResolvePickupCamera()
+        {
+            if (cachedPickupCamera != null && cachedPickupCamera.isActiveAndEnabled)
+            {
+                return cachedPickupCamera;
+            }
+
+            if (Camera.main != null && Camera.main.isActiveAndEnabled)
+            {
+                cachedPickupCamera = Camera.main;
+                return cachedPickupCamera;
+            }
+
+            Camera localCamera = GetComponentInChildren<Camera>(true);
+            if (localCamera != null && localCamera.isActiveAndEnabled)
+            {
+                cachedPickupCamera = localCamera;
+                return cachedPickupCamera;
+            }
+
+#if UNITY_2023_1_OR_NEWER
+            cachedPickupCamera = FindFirstObjectByType<Camera>();
+#else
+            cachedPickupCamera = FindObjectOfType<Camera>();
+#endif
+            return cachedPickupCamera;
+        }
+
+        private static Vector3 GetPreferredTargetPoint(Bounds bounds, Camera activeCamera)
+        {
+            if (activeCamera == null)
+            {
+                return bounds.center;
+            }
+
+            Vector3 preferredPoint = bounds.ClosestPoint(activeCamera.transform.position);
+            return preferredPoint == activeCamera.transform.position
+                ? bounds.center
+                : preferredPoint;
+        }
+
+        private bool TryResolvePickupTarget(Camera activeCamera, Transform playerRoot, out Item item)
+        {
+            item = null;
+            if (IsItemPickupable(lockedItem) &&
+                !IsPickupTemporarilyBlocked(lockedItem) &&
+                IsItemWithinPickupRange(lockedItem, playerRoot))
+            {
+                item = lockedItem;
+                return true;
+            }
+
+            if (activeCamera != null && TryGetLookedAtItem(activeCamera, playerRoot, out item))
+            {
+                return true;
+            }
+
+            return TryGetClosestPickupableItem(playerRoot, out item);
+        }
+
+        private bool TryGetClosestPickupableItem(Transform playerRoot, out Item item)
+        {
+            item = null;
+            Vector3 origin = playerRoot != null ? playerRoot.position : transform.position;
+            float bestDistance = float.MaxValue;
+
+#if UNITY_2023_1_OR_NEWER
+            Item[] items = FindObjectsByType<Item>(FindObjectsSortMode.None);
+#else
+            Item[] items = FindObjectsOfType<Item>();
+#endif
+            for (int i = 0; i < items.Length; i++)
+            {
+                Item candidate = items[i];
+                if (!IsItemPickupable(candidate) ||
+                    IsPickupTemporarilyBlocked(candidate) ||
+                    !IsItemWithinPickupRange(candidate, playerRoot))
+                {
+                    continue;
+                }
+
+                float distance = GetDistanceToItem(candidate, origin);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    item = candidate;
+                }
+            }
+
+            return item != null;
+        }
+
+        private static bool IsItemPickupable(Item item)
+        {
+            return item != null &&
+                   item.isActiveAndEnabled &&
+                   item.gameObject.activeInHierarchy &&
+                   item.item != null &&
+                   item.amount > 0;
         }
 
         private bool HasLineOfSight(Camera activeCamera, Vector3 targetPoint, Item item, Transform playerRoot)
@@ -918,9 +1115,16 @@ namespace Unity.FantasyKingdom
 
         private Transform ResolvePlayerRoot()
         {
-            if (cachedPlayerTransform != null)
+            if (cachedPlayerTransform != null && cachedPlayerTransform.gameObject.activeInHierarchy)
             {
                 return cachedPlayerTransform.root;
+            }
+
+            Transform localRoot = transform.root;
+            if (localRoot != null)
+            {
+                cachedPlayerTransform = localRoot;
+                return cachedPlayerTransform;
             }
 
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
@@ -929,8 +1133,31 @@ namespace Unity.FantasyKingdom
                 return null;
             }
 
-            cachedPlayerTransform = playerObject.transform;
-            return cachedPlayerTransform.root;
+            cachedPlayerTransform = playerObject.transform.root;
+            return cachedPlayerTransform;
+        }
+
+        private bool OwnsPlayerInput()
+        {
+            Transform playerRoot = ResolvePlayerRoot();
+            if (playerRoot == null)
+            {
+                return true;
+            }
+
+            Inventory[] playerInventories = playerRoot.GetComponentsInChildren<Inventory>(true);
+            for (int i = 0; i < playerInventories.Length; i++)
+            {
+                Inventory inventory = playerInventories[i];
+                if (inventory == null || !inventory.enabled || !inventory.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                return inventory == this;
+            }
+
+            return true;
         }
 
         private float GetPickupRayDistance(Camera activeCamera, Transform playerRoot)
@@ -950,7 +1177,22 @@ namespace Unity.FantasyKingdom
                 return true;
             }
 
-            return Vector3.Distance(playerRoot.position, item.transform.position) <= pickupRange;
+            return GetDistanceToItem(item, playerRoot.position) <= pickupRange;
+        }
+
+        private float GetDistanceToItem(Item item, Vector3 origin)
+        {
+            if (item == null)
+            {
+                return float.MaxValue;
+            }
+
+            if (TryGetItemBounds(item, out Bounds bounds))
+            {
+                return Vector3.Distance(origin, bounds.ClosestPoint(origin));
+            }
+
+            return Vector3.Distance(origin, item.transform.position);
         }
 
         private void ToggleInventory()

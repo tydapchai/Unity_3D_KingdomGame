@@ -105,7 +105,7 @@ namespace DevionGames.InventorySystem
                     projectileRigidbody.transform.forward = this.m_CameraTransform.forward;
                 }
 
-                projectileRigidbody.velocity = projectileRigidbody.transform.forward * this.m_ProjectileSpeed;
+                projectileRigidbody.linearVelocity = projectileRigidbody.transform.forward * this.m_ProjectileSpeed;
               
                 this.m_CurrentProjectile = null;
             }
