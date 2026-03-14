@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb096a617379f5642b72ad881d23604d, type: 3}
+  m_Name: IntroTutorialSequence
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.FantasyKingdom.TutorialSequenceDefinition
+  sequenceId: intro_onboarding
+  onlyRunOnce: 1
+  autoStartMode: 1
+  steps:
+  - {fileID: 11400000, guid: 587ab8550d81b134ba133678f8773a96, type: 2}
+  - {fileID: 11400000, guid: ec01e935b51138346a17663240bfb06f, type: 2}
+  - {fileID: 11400000, guid: 47c8640f6b176e6439f0b21396255271, type: 2}
+  - {fileID: 11400000, guid: 5e7f63ba72d27ea4b95ea40535ce7943, type: 2}
+  - {fileID: 11400000, guid: 881d3c2ae0bc5624da84b70148fcab3c, type: 2}

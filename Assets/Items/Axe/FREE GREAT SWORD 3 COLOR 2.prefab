@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3149123870980450174}
   - component: {fileID: 1756945961907734370}
   - component: {fileID: 1868340315543976970}
+  - component: {fileID: 2911846154436801123}
   - component: {fileID: 3176312917575987058}
   m_Layer: 0
   m_Name: FREE GREAT SWORD 3 COLOR 2
@@ -119,6 +120,27 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!65 &2911846154436801123
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7983657016377057305}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.25, y: 1.6, z: 0.25}
+  m_Center: {x: 0, y: 0.8, z: 0}
 --- !u!114 &3176312917575987058
 MonoBehaviour:
   m_ObjectHideFlags: 0

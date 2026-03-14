@@ -79,7 +79,7 @@ namespace DevionGames.InventorySystem
 
         private void FixedUpdate()
         {
-            this.m_Rigidbody.velocity = transform.forward * m_Speed;
+            this.m_Rigidbody.linearVelocity = transform.forward * m_Speed;
 
             if (!this.m_FollowTarget) return;
 
@@ -165,7 +165,7 @@ namespace DevionGames.InventorySystem
 
         private void OnHit(Transform hit, Vector3 position) {
             this.m_Collider.enabled = false;
-            this.m_Rigidbody.velocity = Vector3.zero;
+            this.m_Rigidbody.linearVelocity = Vector3.zero;
             this.m_Rigidbody.constraints = RigidbodyConstraints.FreezeAll;
             transform.position = position;
             transform.parent = hit;

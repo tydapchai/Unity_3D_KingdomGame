@@ -15,7 +15,11 @@ namespace Unity.FantasyKingdom
         [SerializeField] private string interactionPromptMessage = "Press E to talk";
         [SerializeField] private Vector2 interactionPromptPosition = new(0f, 120f);
         [SerializeField] private float interactionDistance = 3f;
+        [SerializeField] private bool autoStartOnEnter;
+        [SerializeField] private bool autoStartOnlyOnce = true;
 
+        private bool autoStartedThisPresence;
+        private bool autoStartConsumed;
         private NpcPatrol npcPatrol;
         private NavMeshAgent navMeshAgent;
         private Transform playerTransform;
@@ -161,18 +165,29 @@ namespace Unity.FantasyKingdom
             RefreshInteractionPrompt();
 
             bool canStartConversation = CanInteractWithPlayer();
-            SetInteractionPromptVisible(canStartConversation);
+            bool shouldShowPrompt = canStartConversation && !autoStartOnEnter;
+            SetInteractionPromptVisible(shouldShowPrompt);
 
             if (!canStartConversation)
             {
+                autoStartedThisPresence = false;
+                return;
+            }
+
+            if (autoStartOnEnter)
+            {
+                if ((!autoStartOnlyOnce || !autoStartConsumed) && !autoStartedThisPresence)
+                {
+                    autoStartedThisPresence = true;
+                    StartConversation();
+                }
+
                 return;
             }
 
             if (Input.GetKeyDown(KeyCode.E))
             {
-                conversationOwnedByThisStarter = true;
-                SetInteractionPromptVisible(false);
-                ConversationManager.Instance.StartConversation(myConversation);
+                StartConversation();
             }
         }
 
@@ -208,6 +223,11 @@ namespace Unity.FantasyKingdom
             if (playerTransform == playerController.transform)
             {
                 playerTransform = null;
+            }
+
+            if (!autoStartConsumed)
+            {
+                autoStartedThisPresence = false;
             }
 
             SetInteractionPromptVisible(false);
@@ -249,7 +269,25 @@ namespace Unity.FantasyKingdom
 
             ResumeNpcMovement();
             conversationOwnedByThisStarter = false;
-            SetInteractionPromptVisible(CanInteractWithPlayer());
+            SetInteractionPromptVisible(CanInteractWithPlayer() && !autoStartOnEnter);
+        }
+
+        private void StartConversation()
+        {
+            if (!IsConversationAvailable())
+            {
+                return;
+            }
+
+            conversationOwnedByThisStarter = true;
+
+            if (autoStartOnEnter)
+            {
+                autoStartConsumed = true;
+            }
+
+            SetInteractionPromptVisible(false);
+            ConversationManager.Instance.StartConversation(myConversation);
         }
 
         private bool IsConversationAvailable()
